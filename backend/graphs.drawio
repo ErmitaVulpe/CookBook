@@ -1,0 +1,130 @@
+<mxfile host="65bd71144e">
+    <diagram id="kI1nMGn4F0ytra6wOlK7" name="Auth">
+        <mxGraphModel dx="1530" dy="767" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-30" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="240" width="800" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;fillColor=none;strokeColor=default;glass=0;shadow=0;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="460" width="800" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-1" value="&lt;font style=&quot;&quot;&gt;&lt;font style=&quot;font-size: 50px;&quot;&gt;Auth&lt;/font&gt;&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="40" width="130" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-20" value="&lt;span style=&quot;font-size: 32px;&quot;&gt;Client&lt;br&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=50;" parent="1" vertex="1">
+                    <mxGeometry x="110" y="130" width="90" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-21" value="&lt;span style=&quot;font-size: 32px;&quot;&gt;Server&lt;br&gt;&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=50;" parent="1" vertex="1">
+                    <mxGeometry x="990" y="130" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-22" value="" style="endArrow=none;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="160" y="200" as="sourcePoint"/>
+                        <mxPoint x="160" y="940" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-23" value="" style="endArrow=none;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="1040" y="200" as="sourcePoint"/>
+                        <mxPoint x="1040" y="940" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-24" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="220" y="289.29" as="sourcePoint"/>
+                        <mxPoint x="980" y="289.29" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-25" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Send request to &quot;/api/v1/auth/log_in&quot;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="430" y="240" width="310" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-26" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="980" y="340" as="sourcePoint"/>
+                        <mxPoint x="220" y="340" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-27" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Set the &quot;refresh_token&quot; cookie with the &quot;/api/v1/auth&quot; scope&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="335" y="290" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="uThmXu7PBUhVy6vQ1OWm-31" value="Log in" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="200" width="70" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="220" y="510" as="sourcePoint"/>
+                        <mxPoint x="980" y="510" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="4" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Send request to &quot;/example&quot;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="465" y="460" width="240" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="980" y="560" as="sourcePoint"/>
+                        <mxPoint x="220" y="560" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="6" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Redirect to &quot;/api/v1/refresh?from=https%3A%2F%2Fexample.com%2Fexample&quot;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="255" y="510" width="660" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="&lt;p style=&quot;line-height: 120%;&quot;&gt;When trying to access protected data with refresh token &lt;br&gt;but without (or with invalidated) access token&lt;/p&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;" parent="1" vertex="1">
+                    <mxGeometry x="350" y="385" width="470" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="220" y="610" as="sourcePoint"/>
+                        <mxPoint x="980" y="610" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="10" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Send request to&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;&quot;/api/v1/refresh?from=https%3A%2F%2Fexample.com%2Fexample&quot;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="235" y="560" width="700" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="980" y="670" as="sourcePoint"/>
+                        <mxPoint x="220" y="670" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="12" value="&lt;p style=&quot;line-height: 100%;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="575" y="600" width="20" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="&lt;p style=&quot;line-height: 100%;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;rotation=0;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="860" width="20" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="If logged in, set the &quot;access_token&quot; cookie with the &quot;/&quot; scope and&lt;br&gt;redirects back to &quot;/example&quot;, else returns http 401" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;fontColor=default;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="610" width="540" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="780" width="800" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="220" y="829.29" as="sourcePoint"/>
+                        <mxPoint x="980" y="829.29" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="17" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Send request to &quot;/api/v1/auth/log_out&quot;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="780" width="330" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="" style="endArrow=classic;html=1;fontSize=32;" parent="1" edge="1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="980" y="880" as="sourcePoint"/>
+                        <mxPoint x="220" y="880" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="21" value="" style="edgeStyle=none;html=1;fontFamily=Helvetica;fontSize=18;fontColor=default;" parent="1" source="19" target="17" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="&lt;span style=&quot;font-size: 18px;&quot;&gt;Clear and invalidate both &lt;/span&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;&quot;refresh_token&quot; and&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 18px;&quot;&gt;&quot;access_token&quot;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=32;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="830" width="510" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="Log out" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;" parent="1" vertex="1">
+                    <mxGeometry x="545" y="740" width="80" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

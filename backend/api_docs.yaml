@@ -1,0 +1,422 @@
+openapi: 3.0.2
+info:
+  title: Backend API v1
+  version: 1.0.0
+servers:
+  - url: http://localhost/api/v1
+tags:
+  - name: auth
+    description: Managing authorization
+  - name: me
+    description: Accessing the data of the logged in user
+  - name: recipes
+    description: Accessing recipes
+  - name: ingredients
+    description: Accessing ingredients
+paths:
+  /auth/change_password:
+    post:
+      tags:
+        - auth
+      summary: Changes user password
+      description: |-
+        Used for changing password of the logged in user
+      operationId: ChangePasswordPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  $ref: "#/components/schemas/Password"
+                new_password:
+                  $ref: "#/components/schemas/NewPassword"
+      responses:
+        200:
+          description: Successfully changed password
+        400:
+          description: Invalid schema
+        401:
+          description: User not logged in
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+  /auth/refresh:
+    get:
+      tags:
+        - auth
+      summary: Used to create an access token.
+      description: |-
+        Shouldn't be used directly  
+        Trying to access a restricted data without (or with an invalidated) will automatically redirect to this
+      operationId: RefreshGet
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: the url to redirect back after a Successful refresh
+          schema:
+            type: string
+            example: https%3A%2F%2Fexample.com%2Fexample
+      responses:
+        200:
+          description: Successfully fetched an access token
+        302:
+          description: Redirecting back to the path specified in the "from" parameter
+        401:
+          description: User not logged in
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+  /auth/log_in:
+    post:
+      tags:
+        - auth
+      summary: Used to log in
+      description: |-
+        Used for logging in.  
+        Sets all the necessary auth cookies
+      operationId: LogInPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  $ref: "#/components/schemas/Username"
+                password:
+                  $ref: "#/components/schemas/Password"
+      responses:
+        200:
+          description: Successfully logged in
+        400:
+          description: Invalid schema
+        401:
+          description: Invalid username or password
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+  /auth/log_out:
+    get:
+      tags:
+        - auth
+      summary: used to log out
+      description: Used for logging out.
+      operationId: LogOutGet
+      responses:
+        200:
+          description: Successfully logged out
+        401:
+          description: User wasn't logged in, in the first place
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+
+  /me:
+    get:
+      tags:
+        - me
+      summary: Get my user data
+      operationId: MeGet
+      responses:
+        200:
+          description: Successfully fetched user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    $ref: "#/components/schemas/Username"
+        401:
+          description: Not signed in
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+
+  /recipes:
+    get:
+      tags:
+        - recipes
+      summary: Gets all the recipes
+      operationId: recipesGet
+      responses:
+        200:
+          description: Successfully fetched recipe data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recipe"
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+  /recipes/{recipe name}:
+    get:
+      tags:
+        - recipes
+      summary: Gets all the data of the specified recipe
+      operationId: recipesSpecificGet
+      responses:
+        200:
+          description: Successfully fetched recipe data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecipeFull"
+        404:
+          description: Recipe not found
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+    post:
+      tags:
+        - recipes
+      summary: Creates a new recipe
+      operationId: recipesSpecificPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: The data of a recipe
+              properties:
+                instructions:
+                  type: array
+                  description: A list of strings with each element being one step of the instruction
+                  items:
+                    type: string
+                    description: A single step in instructions
+                    example: Mix
+                ingredients:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        example: Flour
+                      ammount:
+                        type: integer
+                        format: u32
+                        example: 500
+                      unit:
+                        type: string
+                        example: grams
+      responses:
+        200:
+          description: Successfully created a new recipe
+        401: 
+          description: Not logged in
+        409:
+          description: Recipe with this name already exists
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+    put:
+      tags:
+        - recipes
+      summary: Updates the specified recipe
+      description: Updates only the present keys
+      operationId: recipesSpecificPut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: The data of a recipe
+              properties:
+                name:
+                  type: string
+                  description: The new name
+                  example: cake
+                instructions:
+                  type: array
+                  description: A list of strings with each element being one step of the instruction
+                  items:
+                    type: string
+                    description: A single step in instructions
+                    example: Mix
+                ingredients:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        example: Flour
+                      ammount:
+                        type: integer
+                        format: u32
+                        example: 500
+                      unit:
+                        type: string
+                        example: grams
+      responses:
+        200:
+          description: Successfully created a new recipe
+        401: 
+          description: Not logged in
+        403:
+          description: Not authorized to update
+        404:
+          description: Recipe not found
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+    delete:
+      tags:
+        - recipes
+      summary: Deletes the specified recipe
+      operationId: recipesSpecificDelete
+      responses:
+        200:
+          description: Successfully created a new recipe
+        401: 
+          description: Not logged in
+        403:
+          description: Not authorized to delete
+        404:
+          description: Recipe not found
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+  /recipes_by_ingredients:
+    get:
+      tags:
+        - recipes
+      summary: Gets all the recipes that require specified ingredients
+      operationId: recipesByIngredientsGet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: 
+                $ref: "#/components/schemas/Ingredient"
+      responses:
+        200:
+          description: Successfully fetched recipe data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recipe"
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+
+  /ingredients:
+    get:
+      tags:
+        - ingredients
+      summary: Gets all the ingredients
+      operationId: ingredientsGet
+      responses:
+        200:
+          description: Successfully fetched ingredients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ingredient"
+        429:
+          description: You've been rate limited
+        500:
+          description: Internal error
+
+
+components:
+  schemas:
+    Username:
+      type: string
+      description: |-
+        - 5 - 25 characters
+        - at least one letter
+        - no space allowed
+      example: BestChef
+    Password:
+      type: string
+      description: |-
+        - 7 - 50 characters
+        - 1 upper case letter
+        - 1 lower case letter
+        - 1 special from this list: !@#$%^&*()-_=+[]{}\\|<>,./?
+      example: Dupa123!
+    NewPassword:
+      type: string
+      description: |-
+        - 7 - 50 characters
+        - 1 upper case letter
+        - 1 lower case letter
+        - 1 special from this list: !@#$%^&*()-_=+[]{}\\|<>,./?
+      example: Password1!
+    Recipe:
+      type: object
+      description: The data of a recipe
+      properties:
+        name:
+          type: string
+          description: |-
+            - 5 - 32 characters
+          example: Pancakes
+    RecipeFull:
+      type: object
+      description: The data of a recipe
+      properties:
+        name:
+          type: string
+          description: |-
+            - 5 - 32 characters
+          example: Pancakes
+        can_update:
+          type: boolean
+          description: Specifies if the user that sent the request can update or delete this recipe
+        instructions:
+          type: array
+          description: A list of strings with each element being one step of the instruction
+          items:
+            type: string
+            description: A single step in instructions
+            example: Mix
+        ingredients:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                example: Flour
+              ammount:
+                type: integer
+                format: u32
+                example: 500
+              unit:
+                type: string
+                example: grams
+    Ingredient:
+      type: string
+      description: an available ingredient
+      example: Flour
+
