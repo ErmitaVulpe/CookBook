@@ -1,7 +1,6 @@
 #[allow(unused_imports)]
-use actix_web::{cookie, App, HttpServer, HttpResponse, web};
+use actix_web::{cookie, App, HttpServer, HttpResponse, HttpRequest, web};
 use serde::Deserialize;
-use chrono::{DateTime, Utc};
 
 use super::db::prelude::*;
 use super::{auth, db, models};
@@ -25,16 +24,24 @@ macro_rules! chrono_to_cookie_time {
 
 #[derive(Deserialize)]
 struct Credentials {
-    // Your data structure here
     username: String,
     password: String,
 }
 
 #[actix_web::post("/log_in")]
 async fn log_in(
+    req: HttpRequest,
     app_data: web::Data<models::AppData>,
     credentials: web::Json<Credentials>,
 ) -> HttpResponse {
+    // Check if user is already logged in
+    if let Some(val) = req.cookie(&CookieName::RefreshToken.to_string()) {
+        let jwt = app_data.jwt_conf.from_str(val.value().to_string());
+        if app_data.jwt_conf.validate(jwt).is_none() {
+            return HttpResponse::Ok().body("Already logged in");
+        }
+    }
+
     let mut conn: db::Conn = super::get_conn!(app_data.pool);
 
     // Check if specified user exists
@@ -62,7 +69,7 @@ async fn log_in(
         &credentials.username
     );
     let expiration_time = jwt_data.get_expiration();
-    let jwt_string = jwt_conf.serilize(jwt_data).to_string();
+    let jwt_string = jwt_conf.register(jwt_data).to_string();
 
     let cookie = cookie::Cookie::build(CookieName::RefreshToken.to_string(), jwt_string)
         .path("/auth")
@@ -71,14 +78,30 @@ async fn log_in(
         .http_only(true) 
         .finish();
 
-    HttpResponse::Ok().cookie(cookie).finish() // TODO redirect to refresh
+    HttpResponse::Ok().cookie(cookie).finish()
 }
+
 
 #[actix_web::get("/log_out")]
 async fn log_out(
-    // app_data: web::Data<models::AppData>,
+    req: HttpRequest,
+    app_data: web::Data<models::AppData>,
 ) -> HttpResponse {
-    // TODO Implement token invalidation here
+    // Invalidate the refresh token
+    let refresh_token = match req.cookie(&CookieName::RefreshToken.to_string()) {
+        Some(val) => val.value().to_string(),
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+    let jwt = app_data.jwt_conf.from_str(refresh_token);
+    app_data.jwt_conf.invalidate(jwt);
+
+    // Invalidate the access token if exists
+    if let Some(val) = req.cookie(&CookieName::AccessToken.to_string()) {
+        let jwt_string = val.value();
+        let jwt = app_data.jwt_conf.from_str(
+            jwt_string.to_string());
+        app_data.jwt_conf.invalidate(jwt);
+    }
     
     let refresh_cookie = cookie::Cookie::build(CookieName::RefreshToken.to_string(), "")
         .path("/auth")
@@ -97,21 +120,64 @@ async fn log_out(
     HttpResponse::Ok().cookie(refresh_cookie).cookie(access_cookie).finish()
 }
 
+
 // TODO implement refresh endpoint
-
-
 #[derive(Debug, Deserialize)]
 struct RedirectParams {
     from: Option<String>,
 }
 
 #[actix_web::get("/refresh")]
-async fn refresh(query_params: web::Query<RedirectParams>) -> HttpResponse {
-    if let Some(user_name) = &query_params.from {
+async fn refresh(
+    query_params: web::Query<RedirectParams>,
+    req: HttpRequest,
+    app_data: web::Data<models::AppData>,
+) -> HttpResponse {
+    // Try to get the refresh token
+    let refresh_token = match req.cookie(&CookieName::RefreshToken.to_string()) {
+        Some(val) => val.value().to_string(),
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    // Parse refresh token
+    let refresh_jwt = app_data.jwt_conf.from_str(refresh_token);
+    let claims = match app_data.jwt_conf.validate(refresh_jwt) {
+        Some(val) => val,
+        None => return HttpResponse::Unauthorized().finish(),
+    };
+
+    // Invalidate old refresh token if exists
+    if let Some(val) = req.cookie(&CookieName::AccessToken.to_string()) {
+        let jwt = app_data.jwt_conf.from_str(val.value().to_string());
+        app_data.jwt_conf.invalidate(jwt);
+    }
+
+    // Create an register the access token
+    let access_jwt = app_data.jwt_conf.new(
+        JwtType::AccessToken,
+        &claims.get_username()
+    );
+    let expiration_time = access_jwt.get_expiration();
+    let serialized_access_jwt = app_data.jwt_conf.register(access_jwt).to_string();
+
+    // Build a cookie
+    let access_cookie = cookie::Cookie::build(
+        CookieName::AccessToken.to_string(),
+        serialized_access_jwt
+    )
+        .path("/")
+        .expires(chrono_to_cookie_time!(expiration_time))
+        .secure(true)
+        .http_only(true) 
+        .finish();
+
+    // Send a response
+    if let Some(redirect_path) = &query_params.from {
         HttpResponse::Found()
-            .append_header(("Location", user_name.as_str()))
+            .cookie(access_cookie)
+            .append_header(("Location", redirect_path.as_str()))
             .finish()
     } else {
-        HttpResponse::Ok().body("Hello, anonymous!")
+        HttpResponse::Ok().cookie(access_cookie).finish()
     }
 }

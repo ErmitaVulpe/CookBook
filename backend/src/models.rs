@@ -33,7 +33,7 @@ pub struct KeyValue {
     pub value: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AppData {
     pub pool: db::Pool,
     pub jwt_conf: auth::jwt::JwtConfig,

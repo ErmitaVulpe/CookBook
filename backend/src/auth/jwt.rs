@@ -1,20 +1,39 @@
+//! ## This is an interface as well as storage for all jwt
+//! 
+//! ### Example use
+//! ```
+//! use jwt::{JwtConfig, JwtType};
+//! 
+//! let jwt_conf = jwt::new();
+//! let deserialized_jwt = jwt_conf.new(JwtTpe::AccessToken, "User");
+//! let serialized_jwt = jwt_conf.register(deserialized_jwt);
+//! let jwt_string = serialized_jwt.to_string();
+//! 
+//! let re_serialized_jwt = jwt_conf.from_str(jwt_string);
+//! let deserialized_jwt = jwt_conf.validate(re_serialized_jwt); // Option
+//! ```
+
+use crate::{JWT_REFRESH_DURATION, JWT_ACCESS_DURATION};
 use crate::unwrap_pretty::UnwrapPretty;
 use jsonwebtoken::{encode, decode, Header, Algorithm, EncodingKey, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use chrono::prelude::*;
-use chrono::{Duration, Utc};
+use chrono::Utc;
+use std::{collections::HashMap, sync::RwLock};
+
 
 pub fn new(jwt_secret: &str) -> JwtConfig {
     JwtConfig::init(jwt_secret)
 }
 
-#[derive(Clone)]
+
 pub struct JwtConfig {
     header: Header,
     validation: Validation,
     encoding_key: EncodingKey,
     decoding_key: DecodingKey,
-    valid_duration: Duration,
+    /// # Key is the token string and value is its expiration time
+    pub token_store: TokenStore, // TEMP pub
 }
 
 impl std::fmt::Debug for JwtConfig {
@@ -36,7 +55,7 @@ impl JwtConfig {
             validation,
             encoding_key: EncodingKey::from_secret(jwt_secret.as_bytes()),
             decoding_key: DecodingKey::from_secret(jwt_secret.as_bytes()),
-            valid_duration: Duration::hours(5),
+            token_store: TokenStore::new(),
         }
     }
 
@@ -57,7 +76,10 @@ impl JwtConfig {
         username: &str,
     ) -> JwtDeserialized {
         let issuing = Utc::now();
-        let expiration = issuing + self.valid_duration;
+        let expiration = issuing + match jwt_type {
+            JwtType::AccessToken => *JWT_ACCESS_DURATION,
+            JwtType::RefreshToken => *JWT_REFRESH_DURATION,
+        };
         JwtDeserialized::new(
             jwt_type,
             username,
@@ -85,6 +107,22 @@ impl JwtConfig {
 
     pub fn deserialize(&self, jwt: JwtSerialized) -> Result<JwtDeserialized, jsonwebtoken::errors::Error> {
         jwt.deserialize(self)
+    }
+
+    pub fn register(&self, jwt: JwtDeserialized) -> JwtSerialized {
+        self.token_store.register(self, jwt)
+    }
+
+    pub fn validate(&self, jwt: JwtSerialized) -> Option<JwtDeserialized> {
+        self.token_store.validate(self, jwt)
+    }
+
+    pub fn invalidate(&self, jwt: JwtSerialized) {
+        self.token_store.remove(jwt)
+    }
+
+    pub fn clean(&self) {
+        self.token_store.clean();
     }
 }
 
@@ -170,12 +208,73 @@ impl JwtSerialized {
 }
 
 
+/// ## Used for storing valid tokens
+#[derive(Debug)]
+pub struct TokenStore { // TEMP pub
+    pub tokens: RwLock<HashMap<String, DateTime<Utc>>>, // TEMP pub
+}
+
+impl TokenStore {
+    fn new() -> Self {
+        TokenStore {
+            tokens: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Register a new token
+    fn register(&self, conf: &JwtConfig, jwt: JwtDeserialized) -> JwtSerialized {
+        let expiration_time = jwt.expiration;
+        let jwt = conf.serilize(jwt);
+        let mut tokens_ref = self.tokens.write().unwrap();
+        tokens_ref.insert(jwt.to_string(), expiration_time);
+        jwt
+    }
+
+    /// ## Remove / invalidate a jwt
+    fn remove(&self, jwt: JwtSerialized) {
+        let jwt_string = jwt.to_string();
+        let mut tokens_ref = self.tokens.write().unwrap();
+        tokens_ref.remove(&jwt_string);
+    }
+
+    /// ## Used to validate and deserialize jwt
+    /// ## Will return Some if valid and None if invalid or expired
+    fn validate(&self, conf: &JwtConfig, jwt: JwtSerialized) -> Option<JwtDeserialized> {
+        let expiration_time = {
+            let tokens_ref = self.tokens.read().unwrap();
+            match tokens_ref.get(&jwt.to_string()) {
+                Some(val) => val.to_owned(),
+                None => return None,
+            }
+        };
+
+        if expiration_time < Utc::now() {
+            self.remove(jwt);
+            return None;
+        }
+
+        Some(conf.deserialize(jwt).unwrap())
+    }
+
+    /// ## Used to clean expired tokens
+    /// Since designed to hold the write lock for as little time as possible, this isn't very memmory efficient
+    fn clean(&self) {
+        let now = Utc::now();
+        // Clone tokens
+        let mut tokens_clone = self.tokens.read().unwrap().clone();
+        // Clean cloned tokens
+        tokens_clone.retain(|_, &mut expiration| {
+            now < expiration
+        });
+        // Overwrite tokens
+        *self.tokens.write().unwrap() = tokens_clone;
+    }
+}
+
 
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Duration, Utc};
-
     mod jwt { // Reexport so i can use this module as i would normally
         pub use super::super::*;
     }
@@ -237,9 +336,7 @@ mod tests {
         let jwt_conf_a_to_b = jwt::new(jwt_secret_a)
             .decoding_secret(jwt_secret_b);
 
-        let jwt_conf_b_to_a = jwt_conf_a_to_b
-            .clone()
-            .encoding_secret(jwt_secret_b)
+        let jwt_conf_b_to_a = jwt::new(jwt_secret_b)
             .decoding_secret(jwt_secret_a);
 
         let original_jwt = jwt_conf_a_to_b.new(

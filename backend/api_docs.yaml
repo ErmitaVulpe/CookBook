@@ -65,7 +65,7 @@ paths:
         200:
           description: Successfully fetched an access token
         302:
-          description: Redirecting back to the path specified in the "from" parameter
+          description: Successfully fetched an access token. Redirecting back to the path specified in the "from" parameter
         401:
           description: User not logged in
         429:
@@ -94,7 +94,7 @@ paths:
                   $ref: "#/components/schemas/Password"
       responses:
         200:
-          description: Successfully logged in
+          description: Successfully logged in or already logged in
         400:
           description: Invalid schema
         401:

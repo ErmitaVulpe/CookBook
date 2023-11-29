@@ -4,29 +4,34 @@ use std::io::{self, Write};
 use rand::Rng;
 use diesel::prelude::*;
 
-// const HELP_INFO: &str = format!(r#"
-// Usage: {name} [OPTIONS] COMMAND [ARGS]...
+const HELP_INFO: &str = {
+    use constcat::concat;
+    concat!(
+        r#"
+Usage: "#,
+        env!("CARGO_PKG_NAME"),
+r#" [OPTIONS] COMMAND [ARGS]...
 
-// Options:
-//   -h, --help             Show this message and exit.
-//   -v, --version          Show the version of the CLI.
+Options:
+-h, --help             Show this message and exit.
+-v, --version          Show the version of the CLI.
 
-// Commands:
-//   command1               Description of command1.
-//   command2               Description of command2.
-//   command3               Description of command3.
+Commands:
+command1               Description of command1.
+command2               Description of command2.
+command3               Description of command3.
 
-// Additional Information:
-//   - You can use '--help' with any command to get more details.
-//   - For detailed information on a specific command, use:
-//     your_cli COMMAND --help
+Additional Information:
+- You can use '--help' with any command to get more details.
+- For detailed information on a specific command, use:
+    your_cli COMMAND --help
 
-// Examples:
-//   - your_cli command1 --option1 value1
-//   - your_cli command2 --option2 value2
-// "#,
-// name=env!("CARGO_PKG_NAME"),
-// ).as_ref();
+Examples:
+- your_cli command1 --option1 value1
+- your_cli command2 --option2 value2
+"#
+    )
+};
 
 const SETUP_MENU: &str = r#"
 Welcome to CookBook setup!
@@ -167,9 +172,9 @@ pub fn new_db_file(db_path: &str, admin_pw: &str) {
         exit_with_error!("Couldn't create file at \"{}\": {}", db_path, err);
     }
 
-    if ! validating::is_valid_password(admin_pw) {
-        exit_with_error!("Invalid password. Check help page for more informations")
-    }
+    // if ! validating::is_valid_password(admin_pw) {
+    //     exit_with_error!("Invalid password. Check help page for more informations")
+    // }
 
     let pool: db::Pool = db::establish_connection(format!("sqlite://{}", db_path));
     let mut conn: Conn = pool.get().unwrap();

@@ -10,10 +10,25 @@ mod validating;
 
 use dotenv::dotenv;
 use actix_web::{web, App, HttpServer};
-use std::sync::{Arc, RwLock};
-use std::env;
+use lazy_static::lazy_static;
+use std::{env, thread, time::Duration};
 use macros::exit_with_error;
 use unwrap_pretty::UnwrapPretty;
+
+
+const CLEANUP_INTERVAL: Duration = Duration::from_secs(1);
+// const CLEANUP_INTERVAL: Duration = Duration::from_secs(15 * 60);
+
+lazy_static! {
+    static ref JWT_REFRESH_DURATION: chrono::Duration = {
+        chrono::Duration::days(5)
+        // chrono::Duration::seconds(5)
+    };
+    static ref JWT_ACCESS_DURATION: chrono::Duration = {
+        chrono::Duration::hours(5)
+        // chrono::Duration::seconds(5)
+    };
+}
 
 
 #[actix_web::get("/")]
@@ -160,15 +175,29 @@ async fn main() {
     };
 
 
-    let app_data = models::AppData {
-        pool,
-        jwt_conf,
-    };
+    let app_data = web::Data::new(
+        models::AppData {
+            pool,
+            jwt_conf,
+        }
+    );
+
+    // Set up cleaner thread
+    let thread_data = app_data.clone();
+    thread::spawn(move || {
+        // Infinite loop
+        loop {
+            thread::sleep(CLEANUP_INTERVAL);
+            thread_data.jwt_conf.clean();
+
+            println!("{:?}", thread_data.jwt_conf.token_store.tokens);
+        }
+    });
 
     // Set up web server
     let server = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(app_data.clone()))
+            .app_data(app_data.clone())
             .service(hello)
             .service(web::scope("/api/v1").configure(api::api_v1))
     });
@@ -226,3 +255,34 @@ async fn main() {
 
     println!("Server stopped");
 }
+
+
+
+// use actix_web::{web, App, HttpServer};
+// use std::sync::RwLock;
+
+// struct AppData {
+//     counter: RwLock<u32>,
+// }
+
+// async fn handler(data: web::Data<AppData>) -> String {
+//     let mut counter = data.counter.write().unwrap();
+//     *counter += 1;
+//     format!("Counter: {}", *counter)
+// }
+
+// #[actix_web::main]
+// async fn main() -> std::io::Result<()> {
+//     let app_data = web::Data::new(AppData {
+//         counter: RwLock::new(0),
+//     });
+
+//     HttpServer::new(move || {
+//         App::new()
+//             .app_data(app_data.clone())
+//             .route("/", web::get().to(handler))
+//     })
+//     .bind("127.0.0.1:8080")?
+//     .run()
+//     .await
+// }
