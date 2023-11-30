@@ -16,14 +16,17 @@ use macros::exit_with_error;
 use unwrap_pretty::UnwrapPretty;
 
 
-const CLEANUP_INTERVAL: Duration = Duration::from_secs(1);
-// const CLEANUP_INTERVAL: Duration = Duration::from_secs(15 * 60);
+// set interval for self cleaning of data, in seconds
+// const CLEANUP_INTERVAL: Duration = Duration::from_secs(1);
+const CLEANUP_INTERVAL: Duration = Duration::from_secs(15 * 60);
 
 lazy_static! {
+    // For how long should the refresh token be valid for
     static ref JWT_REFRESH_DURATION: chrono::Duration = {
         chrono::Duration::days(5)
         // chrono::Duration::seconds(5)
     };
+    // For how long should the access token be valid for
     static ref JWT_ACCESS_DURATION: chrono::Duration = {
         chrono::Duration::hours(5)
         // chrono::Duration::seconds(5)
@@ -41,6 +44,7 @@ pub async fn hello() -> impl actix_web::Responder {
 async fn main() {
     dotenv().ok();
     
+    // Set default values
     let mut database_path = env::var("CB_DATABASE_PATH").unwrap_or("database.db".to_owned());
     let mut socket = match env::var("CB_SOCKET") {
         Ok(val) => Some(val),
@@ -61,12 +65,12 @@ async fn main() {
             "-s" | "--setup" => setup::setup(&database_path),
             "-s:ndb" => {
                 let database_path = match iter.next() {
-                    Some(path) => path,
+                    Some(val) => val,
                     None => exit_with_error!("No new database path specified"),
                 };
 
                 let admin_pw = match iter.next() {
-                    Some(pw) => pw,
+                    Some(val) => val,
                     None => exit_with_error!("No admin password specified"),
                 };
 
@@ -74,12 +78,12 @@ async fn main() {
             }
             "-s:nu" => {
                 let username = match iter.next() {
-                    Some(pw) => pw,
+                    Some(value) => value,
                     None => exit_with_error!("No username for the new account specified"),
                 };
 
                 let pw = match iter.next() {
-                    Some(pw) => pw,
+                    Some(value) => value,
                     None => exit_with_error!("No password specified"),
                 };
 
@@ -87,7 +91,7 @@ async fn main() {
             }
             "-s:ni" => {
                 let name = match iter.next() {
-                    Some(pw) => pw,
+                    Some(value) => value,
                     None => exit_with_error!("No ingredient name specified"),
                 };
 
@@ -95,7 +99,7 @@ async fn main() {
             }
             "-s:ri" => {
                 let name = match iter.next() {
-                    Some(pw) => pw,
+                    Some(value) => value,
                     None => exit_with_error!("No ingredient name specified"),
                 };
 
@@ -121,16 +125,16 @@ async fn main() {
                 setup::new_jwt_secret(&database_path, None);
             }
             "-S" | "--socket" => {
-                socket = match iter.next() {
-                    Some(value) => Some(value),
+                match iter.next() {
+                    Some(value) => socket = Some(value),
                     None => exit_with_error!("No socket specified"),
-                };
+                }
             }
             "-j" | "--jwt" => {
-                jwt_secret = match iter.next() {
-                    Some(value) => Some(value),
+                match iter.next() {
+                    Some(value) => jwt_secret = Some(value),
                     None => exit_with_error!("No jwt secret specified"),
-                };
+                }
             }
             "-e" | "--exit" => {
                 std::process::exit(0);
@@ -139,7 +143,11 @@ async fn main() {
                 println!("CookBook by FullStackBros v{}", env!("CARGO_PKG_VERSION"));
                 std::process::exit(0);
             }
-            _ => exit_with_error!("Parameter not found: {}", arg)
+            "-h" | "--help" => {
+                println!("{}", setup::HELP_INFO);
+                std::process::exit(0);
+            }
+            _ => exit_with_error!("Parameter not found: {}\nFor more information use -h flag", arg)
         }
     }
 
@@ -187,7 +195,10 @@ async fn main() {
     thread::spawn(move || {
         // Infinite loop
         loop {
+            // Set interval
             thread::sleep(CLEANUP_INTERVAL);
+
+            // Do the cleaning
             thread_data.jwt_conf.clean();
 
             println!("{:?}", thread_data.jwt_conf.token_store.tokens);

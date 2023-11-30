@@ -23,7 +23,7 @@ use std::{collections::HashMap, sync::RwLock};
 
 
 pub fn new(jwt_secret: &str) -> JwtConfig {
-    JwtConfig::init(jwt_secret)
+    JwtConfig::new(jwt_secret)
 }
 
 
@@ -43,7 +43,7 @@ impl std::fmt::Debug for JwtConfig {
 }
 
 impl JwtConfig {
-    pub fn init(jwt_secret: &str) -> Self {
+    pub fn new(jwt_secret: &str) -> Self {
         let validation = {
             let mut validation = Validation::new(Algorithm::HS256);
             validation.required_spec_claims = std::collections::HashSet::with_capacity(0);
@@ -70,7 +70,7 @@ impl JwtConfig {
     }
 
     /// Creates a new jwt struct. The times will be calculated automatically
-    pub fn new(
+    pub fn new_jwt(
         &self,
         jwt_type: JwtType,
         username: &str,
@@ -88,7 +88,7 @@ impl JwtConfig {
         )
     }
 
-    pub fn from_str(
+    pub fn jwt_from_str(
         &self,
         jwt_str: String,
     ) -> JwtSerialized {
@@ -101,7 +101,7 @@ impl JwtConfig {
 
     pub fn derilize_str(&self, jwt_str: String,) -> Result<JwtDeserialized, jsonwebtoken::errors::Error> {
         self
-            .from_str(jwt_str)
+            .jwt_from_str(jwt_str)
             .deserialize(self)
     }
 
@@ -150,10 +150,10 @@ impl JwtDeserialized {
         expiration: &DateTime<Utc>,
     ) -> Self {
         JwtDeserialized {
-            jwt_type: jwt_type,
+            jwt_type,
             username: String::from(username),
-            issuing: issuing.clone(),
-            expiration: expiration.clone(),
+            issuing: *issuing,
+            expiration: *expiration,
         }
     }
 
@@ -285,7 +285,7 @@ mod tests {
         let jwt_secret = "Secret string";
         let jwt_conf = jwt::new(jwt_secret);
 
-        let original_jwt = jwt_conf.new(
+        let original_jwt = jwt_conf.new_jwt(
             jwt::JwtType::RefreshToken,
             "admin",
         );
@@ -308,7 +308,7 @@ mod tests {
     fn converting_to_string_and_back() {
         let jwt_secret = "Secret string";
         let jwt_conf = jwt::new(jwt_secret);
-        let original_jwt = jwt_conf.new(
+        let original_jwt = jwt_conf.new_jwt(
             jwt::JwtType::RefreshToken,
             "admin",
         );
@@ -319,11 +319,11 @@ mod tests {
         // All ways viable
         let re_read_jwt: jwt::JwtSerialized = jwt_string.clone().into();
         let re_read_jwt2 = jwt::JwtSerialized::from(jwt_string.clone());
-        let re_read_jwt3 = jwt_conf.from_str(jwt_string);
+        let re_read_jwt3 = jwt_conf.jwt_from_str(jwt_string);
         assert_eq!(re_read_jwt, re_read_jwt2);
         assert_eq!(re_read_jwt2, re_read_jwt3);
 
-        let invalid_jwt = jwt_conf.from_str("This isn't a jwt".to_string());
+        let invalid_jwt = jwt_conf.jwt_from_str("This isn't a jwt".to_string());
         assert!(jwt_conf.deserialize(invalid_jwt).is_err());
     }
 
@@ -339,7 +339,7 @@ mod tests {
         let jwt_conf_b_to_a = jwt::new(jwt_secret_b)
             .decoding_secret(jwt_secret_a);
 
-        let original_jwt = jwt_conf_a_to_b.new(
+        let original_jwt = jwt_conf_a_to_b.new_jwt(
             jwt::JwtType::RefreshToken,
             "admin",
         );

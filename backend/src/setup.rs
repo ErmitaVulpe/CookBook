@@ -4,31 +4,35 @@ use std::io::{self, Write};
 use rand::Rng;
 use diesel::prelude::*;
 
-const HELP_INFO: &str = {
+pub const HELP_INFO: &str = {
     use constcat::concat;
+
+    const NAME: &str = env!("CARGO_PKG_NAME");
     concat!(
         r#"
-Usage: "#,
-        env!("CARGO_PKG_NAME"),
-r#" [OPTIONS] COMMAND [ARGS]...
+Usage: "#, NAME, r#" [OPTIONS]
+
+Options get executed one by one
 
 Options:
--h, --help             Show this message and exit.
--v, --version          Show the version of the CLI.
-
-Commands:
-command1               Description of command1.
-command2               Description of command2.
-command3               Description of command3.
-
-Additional Information:
-- You can use '--help' with any command to get more details.
-- For detailed information on a specific command, use:
-    your_cli COMMAND --help
+-d, --database                  Sets a temporary database file path
+-s, --setup                     Enters the setup menu, server won't start after exiting
+-S, --socket                    Sets a temporary socket to bind on
+-j, --jwt                       Sets a temporary jwt secret
+-e, --exit                      Exits the server
+-v, --version                   Shows version
+-s:ndb {path} {admin password}  New DataBase. Creates a new database at specified path
+-s:nu {username} {password}     Creates a new user
+-s:ni {name}                    Creates a new ingredient
+-s:ri {name}                    Removes an ingredient
+-s:S {socket}                   Sets a new socket
+-s:j {secret}                   Sets a new jwt secret
+-s:j:rand                       Sets a new random jwt secret
 
 Examples:
-- your_cli command1 --option1 value1
-- your_cli command2 --option2 value2
+- "#, NAME, r#"
+- "#, NAME, r#" -d ./database.db -s 0.0.0.0:80
+- "#, NAME, r#" -s:ndb ./database.db secret_pw -e
 "#
     )
 };
