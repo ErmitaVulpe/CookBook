@@ -1,8 +1,7 @@
-use actix_web::{cookie, App, HttpResponse, HttpRequest, web};
+use actix_web::{HttpResponse, HttpRequest, web};
 use serde::Serialize;
 
-use super::db::prelude::*;
-use super::{auth, db, models};
+use super::models;
 use super::auth::CookieName;
 
 
