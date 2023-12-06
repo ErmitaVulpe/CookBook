@@ -14,6 +14,8 @@ use lazy_static::lazy_static;
 use std::{env, thread, time::Duration};
 use macros::exit_with_error;
 use unwrap_pretty::UnwrapPretty;
+use actix_extensible_rate_limit::{
+    backend::{memory::InMemoryBackend, SimpleInputFunctionBuilder}, RateLimiter,};
 
 
 // set interval for self cleaning of data, in seconds
@@ -45,7 +47,8 @@ async fn main() {
     dotenv().ok();
     
     // Set default values
-    let mut database_path = env::var("CB_DATABASE_PATH").unwrap_or("database.db".to_owned());
+    let mut database_path = env::var("CB_DATABASE_PATH")
+        .unwrap_or("database.db".to_owned());
     let mut socket = match env::var("CB_SOCKET") {
         Ok(val) => Some(val),
         Err(_) => None,
@@ -190,6 +193,9 @@ async fn main() {
         }
     );
 
+    // Create a rate limiting backend
+    let rate_limiting_backend = InMemoryBackend::builder().build();
+
     // Set up cleaner thread
     let thread_data = app_data.clone();
     thread::spawn(move || {
@@ -207,7 +213,16 @@ async fn main() {
 
     // Set up web server
     let server = HttpServer::new(move || {
+        // Create a rate limiting middleware
+        let input = SimpleInputFunctionBuilder::new(Duration::from_secs(60), 5)
+            .real_ip_key()
+            .build();
+        let rate_limiting_middleware = RateLimiter::builder(rate_limiting_backend.clone(), input)
+            .add_headers()
+            .build();
+
         App::new()
+            .wrap(rate_limiting_middleware)
             .app_data(app_data.clone())
             .service(hello)
             .service(web::scope("/api/v1").configure(api::api_v1))

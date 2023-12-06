@@ -44,3 +44,4 @@ rpassword = "7.3.1"
 constcat = "0.4.0"
 rand = "0.8.5"
 chrono = { version = "0.4.31", features = ["serde"] }
+actix-extensible-rate-limit = "0.2.1"
