@@ -1,107 +1,40 @@
 use serde_repr::*;
-use std::ops::Deref;
 use std::{collections::HashMap, fs, sync::RwLock};
-use std::io::{BufReader, BufRead};
-use ciborium::from_reader;
-
-type NextID = u32;
 
 #[derive(Debug)] // TEMP
 pub struct Cdn {
     path: String,
-    meta: RwLock<(
-        NextID,
-        HashMap<
-            u32, (
-                NextID,
-                HashMap<
-                    u32,
-                    FileExtensions
-                >
-            )
-        >
-    )>,
+    meta: RwLock<(u32, HashMap<u32, u32>)>,
 }
 
 impl Cdn {
-    pub fn new(path: &str) -> Self {
+    pub fn new(path: &str) -> Result<Self, ()> {
         let meta = RwLock::new({
-            let mut map = HashMap::new();
-            
-            let mut max_recipe_id = -1i64;
-            for dir in fs::read_dir(&path).unwrap() {
-                let dir = dir.unwrap();
-                let recipe_id = dir
-                    .file_name()
-                    .into_string()
-                    .unwrap()
-                    .parse::<u32>()
-                    .unwrap();
-
-                if recipe_id as i64 > max_recipe_id {
-                    max_recipe_id = recipe_id as i64
-                }
-
-                let file = fs::File::open(format!("{path}{recipe_id}/meta.cbor")).unwrap();
-                let map_entry: (NextID, HashMap<u32, FileExtensions>) = from_reader(file).unwrap();
-                map.insert(recipe_id, map_entry);
+            let meta_path = format!("{path}meta.cbor");
+            if fs::metadata(&meta_path).is_ok() {
+                let file = fs::File::open(&meta_path).map_err(|_|())?;
+                ciborium::from_reader(file).unwrap()
+            } else {
+                fs::create_dir(&path).map_err(|_|())?;
+                let file = fs::File::create(&meta_path).map_err(|_|())?;
+                let new_meta = (0, HashMap::new());
+                ciborium::into_writer(&new_meta, file).unwrap();
+                new_meta
             }
 
-            (max_recipe_id as u32 + 1, map)
-
-
-            // for dir in fs::read_dir(&path).unwrap() {
-            //     let dir = dir.unwrap();
-            //     let recipe_id = dir
-            //         .file_name()
-            //         .into_string()
-            //         .unwrap()
-            //         .parse::<u32>()
-            //         .unwrap();
-                
-            //     let mut inner_map = HashMap::new();
-                
-            //     let images = fs::read_dir(dir.path()).unwrap()
-            //         .map(|x| x.unwrap().file_name().into_string().unwrap())
-            //         .skip_while(|x| x == "meta.cbor");
-
-            //     for img in images {
-            //         let mut split = img.split(".");
-            //         let img_id = split.next().unwrap().parse::<u32>().unwrap();
-            //         let extension = FileExtensions::try_from(split.next().unwrap()).unwrap();
-            //         inner_map.insert(img_id, extension);
-            //     }
-
-            //     map.insert(recipe_id, inner_map);
-            // }
         });
 
-        println!("{meta:#?}");
-
-        Self {
+        Ok(Self{
             path: path.to_owned(),
             meta,
-        }
+        })
     }
 
-    pub fn add_photo_entry(&self, recipe_id: u32, extension: FileExtensions) -> Result<(), ()> {
-        let mut lock = self.meta.write().map_err(|_| ())?;
-        let recipe = match lock.1.get_mut(&recipe_id) {
-            Some(val) => val,
-            None => {
-                let new_entry = (0, HashMap::new());
-                let next_id = lock.0;
-                lock.1.insert(next_id, new_entry);
-                lock.0 += 1;
-                let reff = lock.1.get_mut(&next_id).unwrap();
-                reff
-            },
-        };
-        recipe.1.insert(recipe.0, extension);
-        recipe.0 += 1;
+    pub fn create_recipe(&self, recipe_id: u32, ) {
+        
+    }
 
-        let mut file = fs::File::create(format!("{}{recipe_id}/meta.cbor", self.path)).map_err(|_| ())?;
-        ciborium::ser::into_writer(recipe, &mut file).map_err(|_| ())?;
+    pub fn add_photo(&self, recipe_id: u32, extension: FileExtensions) -> Result<(), ()> {
         Ok(())
     }
 

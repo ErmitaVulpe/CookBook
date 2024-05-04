@@ -70,7 +70,7 @@ impl AppData {
         let cdn = Cdn::new(&env::var("CDN_PATH").unwrap_or_else(|_| {
             println!("CDN_PATH var not set. Defaulting to cdn/");
             "cdn/".to_owned()
-        }));
+        })).unwrap();
 
         AppData {
             pool,

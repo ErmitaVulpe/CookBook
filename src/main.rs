@@ -26,10 +26,10 @@ async fn main() -> std::io::Result<()> {
     // }
     
     let app_data = web::Data::new(AppData::new());
-    {
-        let a = app_data.clone().into_inner().cdn.add_photo_entry(2, cook_book::cdn::FileExtensions::Webp).unwrap();
-        println!("{:#?}", app_data.clone().into_inner().cdn);
-    }
+    // {
+    //     let a = app_data.clone().into_inner().cdn.add_photo_entry(2, cook_book::cdn::FileExtensions::Webp).unwrap();
+    //     println!("{:#?}", app_data.clone().into_inner().cdn);
+    // }
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;

@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use std::ops::Deref;
 
 use crate::api;
 
@@ -38,10 +39,28 @@ fn HomePage() -> impl IntoView {
 
     let action1 = create_action(|_: &()| api::auth::log_in(api::auth::UserRaw::new("username", "password")));
 
+    let file_input = create_node_ref::<html::Input>();
+
     view! {
         <h1>"Welcome to Leptos!"</h1>
         <button on:click=on_click>"Click Me: " {count}</button>
         <button on:click=move |_| action1.dispatch(())>"Click Me: " {count}</button>
+        <br/>
+        <input
+            name="Upload photos"
+            type="file"
+            node_ref=file_input
+            accept="image/*"
+            multiple
+
+            on:change=move |ev| {
+                let file_list: web_sys::FileList = file_input().unwrap().deref().files().unwrap();
+                for i in 0..file_list.length() {
+                    logging::log!("{:#?}", file_list.get(i).unwrap());
+                }
+                logging::log!("{:#?}", file_list);
+            }
+        />
     }
 }
 
