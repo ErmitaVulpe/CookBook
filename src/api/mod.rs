@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod img;
+pub mod recipes;
 
 #[cfg(feature="ssr")]
 use actix_web::web;

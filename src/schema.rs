@@ -1,9 +1,9 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    ingredients (ingredient_id) {
-        ingredient_id -> Nullable<Integer>,
-        ingredient_name -> Text,
+    ingredients (id) {
+        id -> Integer,
+        name -> Text,
         is_indexable -> Bool,
     }
 }
@@ -17,16 +17,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    recipes (recipe_id) {
-        recipe_id -> Nullable<Integer>,
-        recipe_name -> Text,
+    recipes (name) {
+        name -> Text,
         instructions -> Text,
-        next_photo_id -> Integer,
     }
 }
-
-diesel::joinable!(recipe_ingredients -> ingredients (ingredient_id));
-diesel::joinable!(recipe_ingredients -> recipes (recipe_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     ingredients,

@@ -3,12 +3,15 @@ use {
     diesel::prelude::*,
     diesel::r2d2,
     std::fs,
-    crate::cdn::Cdn,
+    crate::{cdn::Cdn, auth::JwtConfig},
 };
 
 pub mod app;
 pub mod api;
+pub mod pages;
 
+#[cfg(feature = "ssr")]
+pub mod auth;
 #[cfg(feature = "ssr")]
 pub mod schema;
 #[cfg(feature = "ssr")]
@@ -26,11 +29,11 @@ pub fn hydrate() {
 }
 
 #[cfg(feature = "ssr")]
-// #[derive(Clone)]
 pub struct AppData {
     pub pool: r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
     pub admin: api::auth::User,
     pub cdn: cdn::Cdn,
+    pub jwt: JwtConfig,
 }
 
 #[cfg(feature="ssr")]
@@ -71,11 +74,14 @@ impl AppData {
             println!("CDN_PATH var not set. Defaulting to cdn/");
             "cdn/".to_owned()
         })).unwrap();
+        
+        let jwt = JwtConfig::new();
 
         AppData {
             pool,
             admin,
             cdn,
+            jwt,
         }
     }
 

@@ -1,4 +1,4 @@
-INSERT INTO ingredients(ingredient_name, is_indexable) VALUES
+INSERT INTO ingredients(name, is_indexable) VALUES
 ("Flour", true),
 ("Milk", true),
 ("Eggs", true),

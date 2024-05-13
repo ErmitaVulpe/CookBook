@@ -1,13 +1,11 @@
 CREATE TABLE recipes (
-    recipe_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    recipe_name TEXT NOT NULL,
-    instructions TEXT NOT NULL,
-    next_photo_id INTEGER NOT NULL DEFAULT 0
+    name TEXT PRIMARY KEY NOT NULL,
+    instructions TEXT NOT NULL
 );
 
 CREATE TABLE ingredients (
-    ingredient_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ingredient_name TEXT NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name TEXT NOT NULL,
     is_indexable BOOL NOT NULL
 );
 

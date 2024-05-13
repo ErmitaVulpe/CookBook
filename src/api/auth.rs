@@ -64,38 +64,85 @@ mod ssr {
             hasher1.write(self.username.as_bytes());
             let h1 = hasher1.finish();
 
-            hasher2.write(self.username.as_bytes());
-            let h2 = hasher1.finish();
+            hasher2.write(other.username.as_bytes());
+            let h2 = hasher2.finish();
 
             h1 == h2 && self.pw_hash == other.pw_hash
         }
     }
 }
 
-#[server(input = codec::Cbor)]
-pub async fn log_in(_user: UserRaw) -> Result<(), ServerFnError> {
-    // use actix_web::{cookie::Cookie, http::header, http::header::HeaderValue};
-    // use actix_web::web::Data;
-    // use leptos_actix::extract;
-    // use leptos_actix::ResponseOptions;
-    // use actix_web::dev::ConnectionInfo;
-    // use actix_web::http::StatusCode;
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn log_in(user: UserRaw) -> Result<bool, ServerFnError> {
+    use actix_web::{cookie, cookie::Cookie, http::header, http::{header::HeaderValue, StatusCode}};
+    use leptos_actix::{extract, ResponseOptions};
+    use crate::auth::{Claims, Permissions};
 
-    // // pull ResponseOptions from context
-    // let response = expect_context::<ResponseOptions>();
+    let app_data = extract::<actix_web::web::Data<crate::AppData>>().await
+        .map(|i| i.into_inner())?;
+    let response = expect_context::<ResponseOptions>();
+    let user = user.hash();
 
-    // let connection: ConnectionInfo = extract().await?;
-    // println!("connection = {connection:?}");
+    Ok(match user == app_data.admin {
+        false => false,
+        true => {
+            let token = app_data.jwt.generate(Claims::new(Permissions::Admin))
+                .map_err(|_| ServerFnError::new("Error generating a token".to_string()))?;
 
-    // // set the HTTP status code
-    // response.set_status(StatusCode::IM_A_TEAPOT);
+            let cookie = Cookie::build("jwt", &token)
+                .max_age(cookie::time::Duration::hours(6))
+                .http_only(true)
+                .same_site(cookie::SameSite::Strict)
+                .finish();
 
-    // // set a cookie in the HTTP response
-    // let mut cookie = Cookie::build("biscuits", "yes").finish();
-    // if let Ok(cookie) = HeaderValue::from_str(&cookie.to_string()) {
-    //     response.insert_header(header::SET_COOKIE, cookie);
-    // };
+            let cookie_val = HeaderValue::from_str(&cookie.to_string())
+                .map_err(|_| ServerFnError::new("Error generating a token".to_string()))?;
+
+            response.insert_header(header::SET_COOKIE, cookie_val);
+            response.set_status(StatusCode::OK);
+            true
+        },
+    })
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn log_out() -> Result<(), ServerFnError> {
+    use actix_web::{cookie::Cookie, http::header, http::header::HeaderValue};
+    use leptos_actix::ResponseOptions;
+    use leptos::server_fn::error::NoCustomError;
+
+    let response = expect_context::<ResponseOptions>();
+    
+    let mut cookie = Cookie::named("jwt");
+    cookie.make_removal();
+
+    let cookie_val = HeaderValue::from_str(&cookie.to_string())
+        .map_err(|_| ServerFnError::<NoCustomError>::ServerError("Error generating a token".to_string()))?;
+    response.insert_header(header::SET_COOKIE, cookie_val);
 
     Ok(())
 }
 
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn is_logged() -> Result<bool, ServerFnError> {
+    use actix_web::HttpRequest;
+
+    let app_data = super::extract_app_data();
+    let request = expect_context::<HttpRequest>();
+    let app_data = app_data.await?;
+    Ok(check_if_logged(&app_data.jwt, &request))
+}
+
+#[cfg(feature = "ssr")]
+pub fn check_if_logged(jwt: &crate::auth::JwtConfig, req: &actix_web::HttpRequest) -> bool {
+    let cookie = match req.cookie("jwt") {
+        Some(val) => val,
+        None => return false,
+    };
+    let token = cookie.value();
+
+    match jwt.decode(token) {
+        Ok(val) => val.permissions == crate::auth::Permissions::Admin,
+        Err(_) => return false,
+    }
+}

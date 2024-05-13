@@ -8,28 +8,8 @@ async fn main() -> std::io::Result<()> {
     use cook_book::{app::*, AppData, api};
 
     dotenv::dotenv().ok();
-
-    // { // generate example meta
-    //     use std::collections::HashMap;
-    //     use std::fs::File;
-    //     use std::io::Write;
-
-    //     let mut map = HashMap::new();
-    //     map.insert(0u32, 1u32);
-    //     map.insert(1u32, 1u32);
-    //     let map = map;
-
-    //     let mut file = File::create("target/cdn/0/meta.cbor").unwrap();
-    //     ciborium::ser::into_writer(&(2u32, &map), &mut file);
-    //     let mut file = File::create("target/cdn/1/meta.cbor").unwrap();
-    //     ciborium::ser::into_writer(&(2u32, &map), &mut file);
-    // }
     
     let app_data = web::Data::new(AppData::new());
-    // {
-    //     let a = app_data.clone().into_inner().cdn.add_photo_entry(2, cook_book::cdn::FileExtensions::Webp).unwrap();
-    //     println!("{:#?}", app_data.clone().into_inner().cdn);
-    // }
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
@@ -40,6 +20,45 @@ async fn main() -> std::io::Result<()> {
     let leptos_options = conf.leptos_options;
     let leptos_options_data = web::Data::new(leptos_options.clone());
     let site_root = leptos_options.site_root.to_owned();
+
+    {
+        use diesel::prelude::*;
+
+        
+
+        let mut conn = app_data.get_conn().unwrap();
+
+        {
+            #[derive(Debug, Clone, Queryable, Selectable)]
+            #[diesel(table_name = cook_book::schema::recipes)]
+            #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+            struct Recipe {
+                name: String,
+                instructions: String,
+            }
+
+            use cook_book::schema::recipes::dsl::*;
+            let result = recipes
+                .select(Recipe::as_select())
+                .load::<Recipe>(&mut conn);
+            println!("{:#?}", result);
+        }
+        {
+            #[derive(Debug, Clone, Queryable, Selectable)]
+            #[diesel(table_name = cook_book::schema::recipe_ingredients)]
+            #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+            struct RecipeIngredient {
+                recipe_id: i32,
+                ingredient_id: i32,
+            }
+
+            use cook_book::schema::recipe_ingredients::dsl::*;
+            let result = recipe_ingredients
+                .select(RecipeIngredient::as_select())
+                .load::<RecipeIngredient>(&mut conn);
+            println!("{:#?}", result);
+        }
+    }
 
     HttpServer::new(move || {
         App::new()

@@ -22,22 +22,31 @@ dotenv = { version = "0.15.0", optional = true }
 serde = "1.0.200"
 serde_repr = "0.1.19"
 ciborium = "0.2.2"
-web-sys = { version = "0.3.69", features = ["File", "FileList", "HtmlInputElement", "Window"] }
+web-sys = { version = "0.3.69", features = ["File", "FileList", "HtmlInputElement", "KeyboardEvent", "Window"] }
+chrono = { version = "0.4.38", optional = true }
+jsonwebtoken = { version = "9.3.0", optional = true }
+rand = { version = "0.8.5", optional = true }
+image = "0.25.1"
+reqwasm = { version = "0.5.0", optional = true }
 
 [features]
-csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "reqwasm"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "reqwasm"]
 ssr = [
   "dep:actix-files",
   "dep:actix-web",
+  "dep:chrono",
   "dep:diesel",
   "dep:dotenv",
   "dep:leptos_actix",
   "dep:libsqlite3-sys",
+  "dep:jsonwebtoken",
+  "dep:rand",
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
 ]
+reqwasm = ["dep:reqwasm"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
