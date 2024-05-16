@@ -7,11 +7,11 @@ use std::{
 
 use crate::api::{
     self,
-    auth::UserRaw,
+    Error,
+    auth::{LoggedStatus, UserRaw},
     recipes::{Recipe, Ingredient, IngredientWithAmount},
 };
 
-/// Renders the home page of your application.
 #[component]
 pub fn Admin() -> impl IntoView {
     let is_logged = create_rw_signal(None::<bool>);
@@ -19,7 +19,7 @@ pub fn Admin() -> impl IntoView {
     #[cfg(not(feature = "ssr"))]
     let check_if_logged = create_action(move |_: &()| async move {
         match api::auth::is_logged().await {
-            Ok(val) => is_logged.update(|x| *x = Some(val)),
+            Ok(val) => is_logged.update(|x| *x = Some(val == LoggedStatus::LoggedIn)),
             Err(err) => logging::error!("Error fetching data: {err}"),
         };
     });
@@ -36,10 +36,15 @@ pub fn Admin() -> impl IntoView {
             match api::auth::log_in(user.to_owned()).await {
                 Ok(val) => {
                     set_login_error.update(|e| *e = match val {
-                        true => None,
-                        false => Some("Invalid username or password".to_string()),
+                        LoggedStatus::LoggedIn => {
+                            is_logged.update(|x| *x = Some(true));
+                            None
+                        },
+                        LoggedStatus::LoggedOut => {
+                            is_logged.update(|x| *x = Some(false));
+                            Some("Invalid username or password".to_string())
+                        },
                     });
-                    is_logged.update(|x| *x = Some(val));
                 },
                 Err(err) => set_login_error.update(|e| *e = Some(err.to_string())),
             };
@@ -120,7 +125,6 @@ pub fn Admin() -> impl IntoView {
                                     let ingredients = create_rw_signal({
                                         let mut map = BTreeMap::new();
                                         for ingredient in ingredients {
-                                            logging::log!("{ingredient:#?}");
                                             map.insert(ingredient.id, ingredient);
                                         }
                                         map
@@ -219,6 +223,21 @@ fn RecipeForm(
 
     let selected_ingredients = create_rw_signal(Vec::new());
 
+    let create_recipe = create_action(move |recipe: &Recipe| { 
+        let recipe = recipe.clone();
+        async move {
+            api::recipes::create_recipe(recipe).await
+        }
+    });
+
+    let clear_form = move || {
+        form_node.get().unwrap().deref().reset();
+        selected_ingredients.update(|v| v.clear());
+    };
+
+    let disabled = create_recipe.pending();
+    let result = create_recipe.value();
+
     view! {
         <h2> "Create a new recipe" </h2>
         <form
@@ -231,20 +250,7 @@ fn RecipeForm(
                     instructions: instructions_node.get_untracked().unwrap().deref().value(),
                     ingredients: selected_ingredients.get_untracked(),
                 };
-
-                // match api::recipes::create_recipe(new_recipe) {
-                //     _ => {},
-                // }
-                let send = create_action(move |recipe: &Recipe| { 
-                    let recipe = recipe.clone();
-                    async move {
-                        logging::log!("{:#?}", api::recipes::create_recipe(recipe).await);
-                    }
-                });
-                send.dispatch(new_recipe);
-                // TODO CONTINUE and make this action a rescource
-
-                // form_node.get_untracked().unwrap().deref().reset();
+                create_recipe.dispatch(new_recipe);
             }
         >
             <div>
@@ -253,17 +259,20 @@ fn RecipeForm(
                     name="name"
                     node_ref=name_node
                     placeholder="Recipe name"
+                    prop:disabled=move || disabled.get()
                     required
                 />
             </div>
             <RecipeFormIngredientSelector
                 ingredients=ingredients
                 selected_ingredients=selected_ingredients
+                disabled=disabled
             />
             <div>
                 <h5> "Instructions" </h5>
                 <textarea
                     node_ref=instructions_node
+                    prop:disabled=move || disabled.get()
                     cols=50
                     rows=15
                 ></textarea>
@@ -274,15 +283,27 @@ fn RecipeForm(
                     type="file"
                     name="Upload icon"
                     node_ref=icon_node
+                    prop:disabled=move || disabled.get()
                     accept="image/*"
                     required
                 />
             </div>
             <button
                 type="submit"
+                prop:disabled=move || disabled.get()
             >
                 "Create recipe"
             </button>
+            {move || result.get().map(|x| match x {
+                Ok(Ok(())) => {
+                    clear_form();
+                    view! {<p> "Recipe created successfully" </p>}
+                },
+                Ok(Err(err)) => view! {<p style="color:red;"> {match err {
+                    Error::Unauthorized => "Session expired please refresh the site"
+                }} </p>},
+                Err(err) => view! {<p style="color:red;"> {format!("Error creating a recipe:\n{err}")} </p>},
+            })}
         </form>
     }
 }
@@ -291,14 +312,9 @@ fn RecipeForm(
 fn RecipeFormIngredientSelector(
     ingredients: Signal<BTreeMap<i32, Ingredient>>,
     selected_ingredients: RwSignal<Vec<IngredientWithAmount>>,
+    #[prop(into)]
+    disabled: Signal<bool>,
 ) -> impl IntoView {
-    let used_ingredients = create_rw_signal({
-        let mut set = BTreeSet::<i32>::new();
-        for ingredient in selected_ingredients.get_untracked() {
-            set.insert(ingredient.ingredient_id);
-        }
-        set
-    });
     let select_ingredient = create_rw_signal(None::<i32>);
     let derived_ingredients = Signal::derive(move || {
         ingredients.get().values().cloned().collect::<Vec<_>>()
@@ -308,7 +324,7 @@ fn RecipeFormIngredientSelector(
     view! {
         <h5> "Add ingredients" </h5>
         <div>
-            <select on:change=move |ev| {
+            <select prop:disabled=move || disabled.get() on:change=move |ev| {
                 let new_value = event_target_value(&ev).parse::<i32>().unwrap();
                 select_ingredient.set({
                     if new_value == -1 {
@@ -339,23 +355,20 @@ fn RecipeFormIngredientSelector(
                 type="text"
                 name="Ingredient ammount"
                 node_ref=ingredient_ammount
+                prop:disabled=move || disabled.get()
             />
             <input
                 type="button"
                 value="Add ingredient"
+                prop:disabled=move || disabled.get()
                 on:click=move |_| {
                     selected_ingredients.update(move |i| {
                         let selected_id = select_ingredient.get_untracked();
-                        
                         if let Some(val) = selected_id {
-                            
-                            if !used_ingredients.get_untracked().contains(&val) {
+                            if !i.iter().any(|x| x.ingredient_id == val) {
                                 i.push(IngredientWithAmount {
                                     ingredient_id: val,
                                     ammount: ingredient_ammount.get().unwrap().deref().value()
-                                });
-                                used_ingredients.update(|x| {
-                                    x.insert(val);
                                 });
                             }
                         }
@@ -372,12 +385,10 @@ fn RecipeFormIngredientSelector(
                         <li>
                             <button
                                 style="color:red"
+                                prop:disabled=move || disabled.get()
                                 on:click=move |_| {
                                     selected_ingredients.update(|counters| {
                                         counters.retain(|x| x.ingredient_id != ingredient_with_ammount.ingredient_id)
-                                    });
-                                    used_ingredients.update(|x| {
-                                        x.remove(&ingredient_with_ammount.ingredient_id);
                                     });
                                 }
                             > "Remove" </button>

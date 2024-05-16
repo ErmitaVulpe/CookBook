@@ -2,6 +2,8 @@ pub mod auth;
 pub mod img;
 pub mod recipes;
 
+use serde_repr::*;
+
 #[cfg(feature="ssr")]
 use actix_web::web;
 
@@ -16,4 +18,10 @@ pub fn api(cfg: &mut web::ServiceConfig) {
 async fn extract_app_data() -> Result<std::sync::Arc<crate::AppData>, leptos::ServerFnError> {
     leptos_actix::extract::<actix_web::web::Data<crate::AppData>>()
         .await.map(|i| i.into_inner())
+}
+
+#[repr(u8)]
+#[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
+pub enum Error {
+    Unauthorized,
 }

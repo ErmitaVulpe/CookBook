@@ -1,7 +1,7 @@
 use serde_repr::*;
 use std::{collections::HashMap, fs, sync::RwLock};
 
-#[derive(Debug)] // TEMP
+#[derive(Debug)]
 pub struct Cdn {
     path: String,
     meta: RwLock<(u32, HashMap<u32, u32>)>,
@@ -15,7 +15,7 @@ impl Cdn {
                 let file = fs::File::open(&meta_path).map_err(|_|())?;
                 ciborium::from_reader(file).unwrap()
             } else {
-                fs::create_dir(&path).map_err(|_|())?;
+                fs::create_dir_all(&path).map_err(|_|())?;
                 let file = fs::File::create(&meta_path).map_err(|_|())?;
                 let new_meta = (0, HashMap::new());
                 ciborium::into_writer(&new_meta, file).unwrap();

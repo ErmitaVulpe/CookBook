@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_repr::*;
 use leptos::*;
 use leptos::server_fn::codec;
 
@@ -29,6 +30,13 @@ impl UserRaw {
             pw_hash,
         }
     }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Deserialize_repr, Serialize_repr, PartialEq)]
+pub enum LoggedStatus {
+    LoggedIn,
+    LoggedOut,
 }
 
 #[cfg(feature = "ssr")]
@@ -73,7 +81,7 @@ mod ssr {
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn log_in(user: UserRaw) -> Result<bool, ServerFnError> {
+pub async fn log_in(user: UserRaw) -> Result<LoggedStatus, ServerFnError> {
     use actix_web::{cookie, cookie::Cookie, http::header, http::{header::HeaderValue, StatusCode}};
     use leptos_actix::{extract, ResponseOptions};
     use crate::auth::{Claims, Permissions};
@@ -84,7 +92,7 @@ pub async fn log_in(user: UserRaw) -> Result<bool, ServerFnError> {
     let user = user.hash();
 
     Ok(match user == app_data.admin {
-        false => false,
+        false => LoggedStatus::LoggedOut,
         true => {
             let token = app_data.jwt.generate(Claims::new(Permissions::Admin))
                 .map_err(|_| ServerFnError::new("Error generating a token".to_string()))?;
@@ -100,7 +108,7 @@ pub async fn log_in(user: UserRaw) -> Result<bool, ServerFnError> {
 
             response.insert_header(header::SET_COOKIE, cookie_val);
             response.set_status(StatusCode::OK);
-            true
+            LoggedStatus::LoggedIn
         },
     })
 }
@@ -124,25 +132,27 @@ pub async fn log_out() -> Result<(), ServerFnError> {
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn is_logged() -> Result<bool, ServerFnError> {
+pub async fn is_logged() -> Result<LoggedStatus, ServerFnError> {
     use actix_web::HttpRequest;
 
-    let app_data = super::extract_app_data();
+    let app_data = super::extract_app_data().await?;
     let request = expect_context::<HttpRequest>();
-    let app_data = app_data.await?;
     Ok(check_if_logged(&app_data.jwt, &request))
 }
 
 #[cfg(feature = "ssr")]
-pub fn check_if_logged(jwt: &crate::auth::JwtConfig, req: &actix_web::HttpRequest) -> bool {
+pub fn check_if_logged(jwt: &crate::auth::JwtConfig, req: &actix_web::HttpRequest) -> LoggedStatus {
     let cookie = match req.cookie("jwt") {
         Some(val) => val,
-        None => return false,
+        None => return LoggedStatus::LoggedOut,
     };
     let token = cookie.value();
 
     match jwt.decode(token) {
-        Ok(val) => val.permissions == crate::auth::Permissions::Admin,
-        Err(_) => return false,
+        Ok(val) => match val.permissions == crate::auth::Permissions::Admin {
+            true => LoggedStatus::LoggedIn,
+            false => LoggedStatus::LoggedOut,
+        },
+        Err(_) => LoggedStatus::LoggedOut,
     }
 }

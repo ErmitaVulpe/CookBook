@@ -7,6 +7,7 @@ use diesel::prelude::*;
 #[derive(Debug, Clone, Deserialize, Serialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = crate::schema::ingredients)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(primary_key(id))]
 pub struct Ingredient {
     pub id: i32,
     #[serde(rename = "n")]
