@@ -7,3 +7,4 @@ pkg
 **/*.rs.bk
 
 /db.sqlite
+/build/
