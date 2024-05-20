@@ -9,8 +9,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    recipe_ingredients (recipe_id, ingredient_id) {
-        recipe_id -> Integer,
+    recipe_ingredients (recipe_name, ingredient_id) {
+        recipe_name -> Text,
         ingredient_id -> Integer,
         ammount -> Text,
     }

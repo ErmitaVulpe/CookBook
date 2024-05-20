@@ -1,5 +1,5 @@
 #[cfg(feature = "ssr")]
-use diesel::prelude::*;
+use diesel::{prelude::*, insert_into};
 
 use leptos::*;
 use leptos::server_fn::codec;
@@ -30,6 +30,28 @@ pub struct IngredientWithAmount {
     pub ammount: String,
 }
 
+#[cfg(feature = "ssr")]
+impl IngredientWithAmount {
+    pub fn to_insertable(&self, recipe_name: &str) -> OwnedIngredientWithAmount {
+        OwnedIngredientWithAmount {
+            recipe_name: recipe_name.to_string(),
+            ingredient_id: self.ingredient_id,
+            ammount: self.ammount.clone(),
+        }
+    }
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = crate::schema::recipe_ingredients)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct OwnedIngredientWithAmount {
+    recipe_name: String,
+    ingredient_id: i32,
+    ammount: String,
+}
+
+
 
 #[server(input = codec::GetUrl, output = codec::Cbor)]
 pub async fn get_ingredients() -> Result<Vec<Ingredient>, ServerFnError> {
@@ -55,34 +77,34 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
 
     Ok(match check_if_logged(&app_data.jwt, &request) {
         LoggedStatus::LoggedIn => {
-            // let mut conn = app_data.get_conn()?;
+            let mut conn = app_data.get_conn()?;
 
-            // let result = conn.transaction(|conn| {
-            //     {
-            //         use crate::schema::recipes::dsl::*;
-                    
-            //         insert_into(recipes).values((
-            //             name.eq(recipe.name),
-            //             instructions.eq(recipe.instructions),
-            //         )).execute(conn)
-            //         .map(|_| ())?
-            //     }
-            //     {
-            //         use crate::schema::recipe_ingredients::dsl::*;
-            //         let ingredints = recipe.ingredients;
+            let result = conn.transaction(|conn| {
+                {
 
-            //         let asd = ingredints.iter().map(|i| {(
-            //             recipe_id.eq(recipe.name),
-            //             ingredient_id.eq(i.ingredient_id),
-            //             ammount.eq(i.ammount),
-            //         )}).collect::<Vec<_>>();
+                    use crate::schema::recipes::dsl::*;
+                    insert_into(recipes).values((
+                        name.eq(recipe.name),
+                        instructions.eq(recipe.instructions),
+                    )).execute(conn)
+                    .map(|_| ())?
+                }
+                {
+                    use crate::schema::recipe_ingredients::dsl::*;
+                    let ingredints = recipe.ingredients;
+                    let other_recipe_name = &recipe.name;
+                    // TODO Destruct recipe to satisfy borrow checker
 
-            //         insert_into(recipe_ingredients).values(
-            //             &asd
-            //         ).execute(conn)
-            //         .map(|_| ())
-            //     }
-            // });
+                    let asd = ingredints.iter().map(|i| {
+                        i.to_insertable(other_recipe_name)
+                    }).collect::<Vec<_>>();
+
+                    insert_into(recipe_ingredients).values(
+                        &asd
+                    ).execute(conn)
+                    .map(|_| ())
+                }
+            });
 
             Ok(())
         },

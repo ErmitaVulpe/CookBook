@@ -10,8 +10,8 @@ CREATE TABLE ingredients (
 );
 
 CREATE TABLE recipe_ingredients (
-    recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id),
+    recipe_name TEXT NOT NULL REFERENCES recipes(recipe_name),
     ingredient_id INTEGER NOT NULL REFERENCES ingredients(ingredient_id),
     ammount TEXT NOT NULL,
-    PRIMARY KEY (recipe_id, ingredient_id)
+    PRIMARY KEY (recipe_name, ingredient_id)
 );
