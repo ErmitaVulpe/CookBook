@@ -48,8 +48,10 @@ async fn main() -> std::io::Result<()> {
             #[diesel(table_name = cook_book::schema::recipe_ingredients)]
             #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
             struct RecipeIngredient {
-                recipe_id: i32,
+                id: i32,
+                recipe_name: String,
                 ingredient_id: i32,
+                ammount: String,
             }
 
             use cook_book::schema::recipe_ingredients::dsl::*;

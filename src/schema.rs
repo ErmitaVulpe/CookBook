@@ -9,7 +9,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    recipe_ingredients (recipe_name, ingredient_id) {
+    recipe_ingredients (id) {
+        id -> Integer,
         recipe_name -> Text,
         ingredient_id -> Integer,
         ammount -> Text,
@@ -22,6 +23,9 @@ diesel::table! {
         instructions -> Text,
     }
 }
+
+diesel::joinable!(recipe_ingredients -> ingredients (ingredient_id));
+diesel::joinable!(recipe_ingredients -> recipes (recipe_name));
 
 diesel::allow_tables_to_appear_in_same_query!(
     ingredients,

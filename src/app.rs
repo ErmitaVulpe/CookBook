@@ -6,24 +6,22 @@ use crate::pages::*;
 
 #[component]
 pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
     view! {
-        // injects a stylesheet into the document <head>
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/cook-book.css"/>
-
-        // sets the document title
         <Title text="Welcome to Leptos"/>
 
-        // content for this welcome page
         <Router>
             <main>
                 <Routes>
-                    <Route path="" view=Home/>
-                    <Route path="/admin" view=Admin/>
-                    <Route path="/*any" view=NotFound/>
+                    <Route path="" view=home::Home/>
+                    <Route path="/admin" view=admin::Admin>
+                        <Route path="" view=admin::ToolList/>
+                        <Route path="/create_recipe" view=admin::create_recipe::CreateRecipe/>
+                        <Route path="/delete_recipe" view=admin::delete_recipe::DeleteRecipe/>
+                    </Route>
+                    <Route path="/*any" view=not_found::NotFound/>
                 </Routes>
             </main>
         </Router>

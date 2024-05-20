@@ -25,3 +25,24 @@ pub struct Ingredient {
     #[serde(rename = "ii")]
     pub is_indexable: bool,
 }
+
+
+#[cfg(feature = "ssr")]
+#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Selectable)]
+#[diesel(table_name = crate::schema::recipes)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct Recipe {
+    #[serde(rename = "n")]
+    pub name: String,
+    #[serde(rename = "i")]
+    pub instructions: String,
+}
+
+#[cfg(not(feature = "ssr"))]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Recipe {
+    #[serde(rename = "n")]
+    pub name: String,
+    #[serde(rename = "i")]
+    pub instructions: String,
+}

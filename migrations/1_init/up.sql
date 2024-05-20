@@ -10,8 +10,9 @@ CREATE TABLE ingredients (
 );
 
 CREATE TABLE recipe_ingredients (
-    recipe_name TEXT NOT NULL REFERENCES recipes(recipe_name),
-    ingredient_id INTEGER NOT NULL REFERENCES ingredients(ingredient_id),
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    recipe_name TEXT NOT NULL REFERENCES recipes(name) ON DELETE CASCADE,
+    ingredient_id INTEGER NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     ammount TEXT NOT NULL,
-    PRIMARY KEY (recipe_name, ingredient_id)
+    UNIQUE (recipe_name, ingredient_id)
 );

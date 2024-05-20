@@ -6,11 +6,14 @@ use leptos::server_fn::codec;
 use serde::{Deserialize, Serialize};
 
 pub mod models;
-pub use models::Ingredient;
+pub use models::{Ingredient, Recipe as DbRecipe};
 use super::Error;
 
 #[cfg(feature = "ssr")]
-use super::auth::{check_if_logged, LoggedStatus};
+use super::{
+    auth::{check_if_logged, LoggedStatus}, 
+    extract_app_data
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Recipe {
@@ -57,7 +60,7 @@ pub struct OwnedIngredientWithAmount {
 pub async fn get_ingredients() -> Result<Vec<Ingredient>, ServerFnError> {
     use crate::schema::ingredients::dsl::*;
 
-    let app_data = super::extract_app_data().await?;
+    let app_data = extract_app_data().await?;
     let mut conn = app_data.get_conn()?;
 
     let result = ingredients
@@ -71,32 +74,33 @@ pub async fn get_ingredients() -> Result<Vec<Ingredient>, ServerFnError> {
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFnError> {
-    let app_data = leptos_actix::extract::<actix_web::web::Data<crate::AppData>>()
-        .await.map(|i| i.into_inner())?;
+    let app_data = extract_app_data().await?;
     let request = expect_context::<actix_web::HttpRequest>();
 
-    Ok(match check_if_logged(&app_data.jwt, &request) {
+    match check_if_logged(&app_data.jwt, &request) {
         LoggedStatus::LoggedIn => {
             let mut conn = app_data.get_conn()?;
 
-            let result = conn.transaction(|conn| {
-                {
+            let Recipe {
+                name: new_recipe_name,
+                instructions: new_recipe_instructions,
+                ingredients: new_recipe_ingredients,
+            } = recipe;
 
+            let result = conn.transaction(move |conn| {
+                {
                     use crate::schema::recipes::dsl::*;
                     insert_into(recipes).values((
-                        name.eq(recipe.name),
-                        instructions.eq(recipe.instructions),
+                        name.eq(&new_recipe_name),
+                        instructions.eq(&new_recipe_instructions),
                     )).execute(conn)
                     .map(|_| ())?
                 }
                 {
                     use crate::schema::recipe_ingredients::dsl::*;
-                    let ingredints = recipe.ingredients;
-                    let other_recipe_name = &recipe.name;
-                    // TODO Destruct recipe to satisfy borrow checker
 
-                    let asd = ingredints.iter().map(|i| {
-                        i.to_insertable(other_recipe_name)
+                    let asd = new_recipe_ingredients.iter().map(|i| {
+                        i.to_insertable(&new_recipe_name)
                     }).collect::<Vec<_>>();
 
                     insert_into(recipe_ingredients).values(
@@ -106,11 +110,55 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 }
             });
 
-            Ok(())
+            match result {
+                Ok(_) => Ok(Ok(())),
+                Err(err) => Err(ServerFnError::new(err.to_string())),
+            }
         },
         LoggedStatus::LoggedOut => {
-            Err(Error::Unauthorized)
+            Ok(Err(Error::Unauthorized))
         },
-    })
+    }
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn delete_recipes(recipe_names: Vec<String>) -> Result<Result<(), Error>, ServerFnError> {
+    let app_data = extract_app_data().await?;
+    let request = expect_context::<actix_web::HttpRequest>();
+
+    match check_if_logged(&app_data.jwt, &request) {
+        LoggedStatus::LoggedIn => {
+            let mut conn = app_data.get_conn()?;
+
+            let result = conn.transaction(move |conn| {
+                use crate::schema::recipes::dsl::*;
+
+                diesel::delete(recipes.filter(name.eq_any(&recipe_names)))
+                    .execute(conn)
+                    .map(|_| ())
+            });
+
+            match result {
+                Ok(_) => Ok(Ok(())),
+                Err(err) => Err(ServerFnError::new(err.to_string())),
+            }
+        },
+        LoggedStatus::LoggedOut => {
+            Ok(Err(Error::Unauthorized))
+        },
+    }
+}
+
+#[server(input = codec::GetUrl, output = codec::Cbor)]
+pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
+    let app_data = extract_app_data().await?;
+    let mut conn = app_data.get_conn()?;
+
+    use crate::schema::recipes::dsl::*;
+    let result = recipes
+        .select(name)
+        .load::<String>(&mut conn);
+
+    result.map_err(|e| ServerFnError::new(e.to_string()))
 }
 
