@@ -3,6 +3,7 @@ pub mod delete_recipe;
 
 use leptos::*;
 use leptos_router::*;
+use rand::RngCore;
 use std::collections::BTreeMap;
 
 use crate::api::{
@@ -67,7 +68,15 @@ pub fn Admin() -> impl IntoView {
 
 
     view! {
-        <h1>"Admin panel"</h1>
+        <h1>{
+            // Le funny
+            let mut rng = rand::thread_rng();
+            if (rng.next_u32() % 100) == 0 {
+                "Adnim palen"
+            } else {
+                "Admin panel"
+            }
+        }</h1>
         <A href="/"> "To home" </A>
         {move || match is_logged_memo.get() {
             None => view! { <p> "Loading" </p> }.into_view(),
