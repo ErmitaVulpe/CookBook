@@ -85,6 +85,7 @@ pub fn DeleteRecipe() -> impl IntoView {
                 recipe_names.update(|x| x.0.retain(|s| !selected_names.get_untracked().contains(s)));
                 selected_names.update(|x| x.clear());
                 confirm_node.get().unwrap().set_checked(false);
+                confirm_signal.set(false);
                 view! {<p> "Recipe deleted successfully" </p>}
             },
             Ok(Err(err)) => view! {<p style="color:red;"> {match err {
