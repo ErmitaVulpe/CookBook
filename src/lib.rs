@@ -30,7 +30,7 @@ pub fn hydrate() {
 
 #[cfg(feature = "ssr")]
 pub struct AppData {
-    pub pool: r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
+    pool: r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>,
     pub admin: api::auth::User,
     pub cdn: cdn::Cdn,
     pub jwt: JwtConfig,

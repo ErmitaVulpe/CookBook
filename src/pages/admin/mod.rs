@@ -148,13 +148,6 @@ pub fn Admin() -> impl IntoView {
                                     provide_context(create_rw_signal(IngredientsContext(ingredients)));
                                     provide_context(create_rw_signal(RecipeNamesContext(recipe_names)));
 
-                                    { // TEMP
-                                        let recipe_names = expect_context::<RwSignal<RecipeNamesContext>>();
-                                        create_effect(move |_| {
-                                            logging::log!("Value: {:#?}", recipe_names.get());
-                                        });
-                                    }
-
                                     view! {
                                         <Outlet />
                                     }

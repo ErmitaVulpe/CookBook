@@ -6,7 +6,7 @@ use leptos::server_fn::codec;
 use serde::{Deserialize, Serialize};
 
 pub mod models;
-pub use models::{Ingredient, Recipe as DbRecipe};
+pub use models::{Ingredient, Recipe as DbRecipe, RecipeIngredients};
 use super::Error;
 
 #[cfg(feature = "ssr")]
@@ -65,6 +65,23 @@ pub async fn get_ingredients() -> Result<Vec<Ingredient>, ServerFnError> {
 
     let result = ingredients
         .select(Ingredient::as_select())
+        .load(&mut conn);
+
+    result.map_err(|e| {
+        ServerFnError::new(e.to_string())
+    })
+}
+
+#[server(input = codec::GetUrl, output = codec::Cbor)]
+pub async fn get_recipe_ingredients(name: String) -> Result<Vec<RecipeIngredients>, ServerFnError> {
+    use crate::schema::recipe_ingredients::dsl::*;
+
+    let app_data = extract_app_data().await?;
+    let mut conn = app_data.get_conn()?;
+
+    let result = recipe_ingredients
+        .filter(recipe_name.eq(name))
+        .select(RecipeIngredients::as_select())
         .load(&mut conn);
 
     result.map_err(|e| {
