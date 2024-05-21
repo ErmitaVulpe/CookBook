@@ -1,0 +1,1 @@
+[ ] Sanitize new recipe name

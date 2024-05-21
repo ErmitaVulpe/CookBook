@@ -24,8 +24,6 @@ async fn main() -> std::io::Result<()> {
     {
         use diesel::prelude::*;
 
-        
-
         let mut conn = app_data.get_conn().unwrap();
 
         {
