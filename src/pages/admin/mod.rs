@@ -197,9 +197,11 @@ fn LoginForm(
                 }}
             </p>
             <input
+                id="username"
                 type="text"
                 required
                 placeholder="Username"
+                autocomplete="username"
                 prop:disabled=move || disabled.get()
                 on:keyup=move |ev: ev::KeyboardEvent| {
                     let val = event_target_value(&ev);
@@ -212,9 +214,11 @@ fn LoginForm(
             />
             <br/>
             <input
+                id="current-password"
                 type="password"
                 required
                 placeholder="Password"
+                autocomplete="current-password"
                 prop:disabled=move || disabled.get()
                 on:keyup=move |ev: ev::KeyboardEvent| {
                     let val = event_target_value(&ev);

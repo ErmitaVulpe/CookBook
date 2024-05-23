@@ -15,6 +15,8 @@ use super::{
     extract_app_data
 };
 
+pub const MAX_RECIPE_NAME_LENGHT: usize = 100;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Recipe {
     #[serde(rename = "n")]
@@ -179,3 +181,57 @@ pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
     result.map_err(|e| ServerFnError::new(e.to_string()))
 }
 
+/// fields:
+/// - r - Recipe name
+/// - d - Image data
+#[server(input = codec::MultipartFormData, output = codec::Cbor)]
+pub async fn upload_icon(data: codec::MultipartData) -> Result<Result<(), Error>, ServerFnError> {
+    let mut data = data.into_inner().unwrap();
+
+    // let app_data = extract_app_data().await?;
+
+    while let Ok(Some(mut field)) = data.next_field().await {
+        let name =
+            field.file_name().expect("no filename on field").to_string();
+        while let Ok(Some(chunk)) = field.chunk().await {
+            let len = chunk.len();
+            println!("[{name}]\t{len}");
+            // in a real server function, you'd do something like saving the file here
+        }
+    }
+
+    Ok(Ok(()))
+}
+
+// #[actix_web::put("/file")]
+// pub async fn put_file(
+//     config: web::Data<Config>, form: MultipartForm<Upload>) -> impl Responder {
+//     const MAX_FILE_SIZE: u64 = 1024 * 1024 * 10; // 10 MB
+//     const MAX_FILE_COUNT: i32 = 1;
+
+//     // reject malformed requests
+//     match form.file.size {
+//         0 => return HttpResponse::BadRequest().finish(),
+//         length if length > MAX_FILE_SIZE.try_into().unwrap() => {
+//             return HttpResponse::BadRequest()
+//                 .body(format!("The uploaded file is too large. Maximum size is {} bytes.", MAX_FILE_SIZE));
+//         },
+//         _ => {}
+//     };
+    
+//     let temp_file_path = form.file.file.path();
+//     let file_name: &str = form
+//         .file
+//         .file_name
+//         .as_ref()
+//         .map(|m| m.as_ref())
+//         .unwrap_or("null");
+
+//     let mut file_path = PathBuf::from(&config.data_path);
+//     file_path.push(&sanitize_filename::sanitize(&file_name));
+
+//     match std::fs::rename(temp_file_path, file_path) {
+//         Ok(_) => HttpResponse::Ok().finish(),
+//         Err(_) => HttpResponse::InternalServerError().finish(),
+//     }
+// }

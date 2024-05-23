@@ -11,29 +11,31 @@ actix-files = { version = "0.6.5", optional = true }
 actix-web = { version = "4", optional = true, features = ["macros"] }
 actix-multipart = { version = "0.6.1", optional = true }
 console_error_panic_hook = "0.1"
-http = { version = "1.0.0", optional = true }
-leptos = { version = "0.6", features = ["nightly"] }
-leptos_meta = { version = "0.6", features = ["nightly"] }
-leptos_actix = { version = "0.6", optional = true }
-leptos_router = { version = "0.6", features = ["nightly"] }
-libsqlite3-sys = { version = "0.28.0", features = ["bundled", "bundled-windows"], optional = true }
-wasm-bindgen = "=0.2.92"
+chrono = { version = "0.4.38", optional = true }
+ciborium = "0.2.2"
 diesel = { version = "2.1.6", features = ["libsqlite3-sys", "sqlite", "32-column-tables", "r2d2", "without-deprecated"], default-features = false, optional = true }
 dotenv = { version = "0.15.0", optional = true }
+futures-util = { version = "0.3.30", optional = true }
+http = { version = "1.0.0", optional = true }
+image = "0.25.1"
+jsonwebtoken = { version = "9.3.0", optional = true }
+leptos = { version = "0.6", features = ["nightly"] }
+leptos_actix = { version = "0.6", optional = true }
+leptos_meta = { version = "0.6", features = ["nightly"] }
+leptos_router = { version = "0.6", features = ["nightly"] }
+libsqlite3-sys = { version = "0.28.0", features = ["bundled", "bundled-windows"], optional = true }
+rand = { version = "0.8.5" }
+reqwasm = "0.5.0"
 serde = "1.0.200"
 serde_repr = "0.1.19"
-ciborium = "0.2.2"
-web-sys = { version = "0.3.69", features = ["File", "FileList", "HtmlInputElement", "KeyboardEvent", "Window"] }
-chrono = { version = "0.4.38", optional = true }
-jsonwebtoken = { version = "9.3.0", optional = true }
-rand = { version = "0.8.5" }
-image = "0.25.1"
-reqwasm = { version = "0.5.0", optional = true }
 server_fn = { version = "0.6.11", features = ["multipart"] }
+wasm-bindgen = "=0.2.92"
+# webp = "0.3.0"
+web-sys = { version = "0.3.69", features = ["Blob", "Document", "File", "FileList", "FormData", "HtmlInputElement", "KeyboardEvent", "Location"] }
 
 [features]
-csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "reqwasm"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "reqwasm"]
+csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
 ssr = [
   "dep:actix-files",
   "dep:actix-web",
@@ -41,14 +43,14 @@ ssr = [
   "dep:chrono",
   "dep:diesel",
   "dep:dotenv",
+  "dep:futures-util",
+  "dep:jsonwebtoken",
   "dep:leptos_actix",
   "dep:libsqlite3-sys",
-  "dep:jsonwebtoken",
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
 ]
-reqwasm = ["dep:reqwasm"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

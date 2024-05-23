@@ -101,6 +101,7 @@ pub async fn log_in(user: UserRaw) -> Result<LoggedStatus, ServerFnError> {
                 .max_age(cookie::time::Duration::hours(6))
                 .http_only(true)
                 .same_site(cookie::SameSite::Strict)
+                .path("/")
                 .finish();
 
             let cookie_val = HeaderValue::from_str(&cookie.to_string())

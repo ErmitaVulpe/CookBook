@@ -1,4 +1,8 @@
 use leptos::*;
+use web_sys::{
+    File,
+    window,
+};
 use std::ops::Deref;
 
 use crate::api::{
@@ -8,6 +12,12 @@ use crate::api::{
 };
 
 use super::{GoBack, IngredientsContext, RecipeNamesContext};
+
+#[derive(Clone, Debug)]
+struct NewRecipeData {
+    recipe: Recipe,
+    icon: File,
+}
 
 #[component]
 pub fn CreateRecipe() -> impl IntoView {
@@ -22,10 +32,37 @@ pub fn CreateRecipe() -> impl IntoView {
     let selected_ingredients = create_rw_signal(Vec::new());
     let new_recipe_name = create_rw_signal(String::new());
 
-    let create_recipe = create_action(move |recipe: &Recipe| { 
+    // let create_recipe = create_action(move |recipe: &Recipe| { 
+    //     let recipe = recipe.clone();
+    //     async move {
+    //         api::recipes::create_recipe(recipe).await
+    //     }
+    // });
+
+    let create_recipe = create_action(move |recipe: &NewRecipeData| { 
         let recipe = recipe.clone();
+        let NewRecipeData {
+            recipe,
+            icon,
+        } = recipe;
+        let recipe_name = recipe.name.clone();
         async move {
-            api::recipes::create_recipe(recipe).await
+            match api::recipes::create_recipe(recipe).await {
+                Err(err) => return Err(err),
+                Ok(Err(err)) => return Ok(Err(err)),
+                _ => {},
+            }
+
+            let window = window().unwrap();
+            let location = window.location();
+
+            let host = format!(
+                "{}//{}",
+                location.protocol().unwrap(),
+                location.host().unwrap(),
+            );
+
+            api::img::upload_icon(&host, &recipe_name, &icon).await
         }
     });
 
@@ -48,12 +85,18 @@ pub fn CreateRecipe() -> impl IntoView {
                 let name = name_node.get_untracked().unwrap().deref().value();
                 new_recipe_name.set(name.clone());
 
-                let new_recipe = Recipe {
+                let recipe = Recipe {
                     name,
                     instructions: instructions_node.get_untracked().unwrap().deref().value(),
                     ingredients: selected_ingredients.get_untracked(),
                 };
-                create_recipe.dispatch(new_recipe);
+
+                let recipe_data = NewRecipeData {
+                    recipe,
+                    icon: icon_node.get().unwrap().files().unwrap().get(0).unwrap(),
+                };
+
+                create_recipe.dispatch(recipe_data);
             }
         >
             <div>

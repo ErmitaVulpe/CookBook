@@ -1,6 +1,8 @@
 use serde_repr::*;
 use std::{collections::HashMap, fs, sync::RwLock};
 
+pub const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MiB
+
 #[derive(Debug)]
 pub struct Cdn {
     path: String,
