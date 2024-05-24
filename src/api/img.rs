@@ -57,7 +57,7 @@ async fn upload_icon_private(
                 }
             },
             "d" => while let Some(chunk) = field.try_next().await? {
-                raw_icon_bytes.extend_from_slice(&*chunk);
+                raw_icon_bytes.extend_from_slice(&chunk);
                 if recipe_name.len() > crate::cdn::MAX_IMAGE_SIZE {
                     return Ok(HttpResponse::PayloadTooLarge().finish())
                 }
@@ -66,12 +66,14 @@ async fn upload_icon_private(
         }
     }
 
-    println!("name: {recipe_name}");
-    println!("len: {}", raw_icon_bytes.len());
+    let result = app_data.cdn.transaction(|cdn| {
+        cdn.upload_icon(&recipe_name, &raw_icon_bytes)
+    });
 
-    // TODO convert and save the icon
-
-    Ok(HttpResponse::Ok().finish())
+    match result {
+        Ok(()) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => Ok(e.into()),
+    }
 }
 
 pub async fn upload_icon(host: &str, recipe_name: &str, icon: &File) -> Result<Result<(), super::Error>, ServerFnError> {

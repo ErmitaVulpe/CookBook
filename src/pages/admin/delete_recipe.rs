@@ -91,7 +91,7 @@ pub fn DeleteRecipe() -> impl IntoView {
             Ok(Err(err)) => view! {<p style="color:red;"> {match err {
                 Error::Unauthorized => "Session expired please refresh the site"
             }} </p>},
-            Err(err) => view! {<p style="color:red;"> {format!("Error creating a recipe:\n{err}")} </p>},
+            Err(err) => view! {<p style="color:red;"> {format!("Error deleting a recipe:\n{err}")} </p>},
         })}
     }
 }

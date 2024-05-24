@@ -53,3 +53,9 @@ impl JwtConfig {
             .map(|x| x.claims)
     }
 }
+
+impl Default for JwtConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}

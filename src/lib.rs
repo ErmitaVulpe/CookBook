@@ -73,9 +73,9 @@ impl AppData {
         let cdn = Cdn::new(&env::var("CDN_PATH").unwrap_or_else(|_| {
             println!("CDN_PATH var not set. Defaulting to cdn/");
             "cdn/".to_owned()
-        })).unwrap();
+        }));
         
-        let jwt = JwtConfig::new();
+        let jwt = JwtConfig::default();
 
         AppData {
             pool,
@@ -92,5 +92,12 @@ impl AppData {
         self.pool.get().map_err(|e| {
             leptos::ServerFnError::new(e)
         })
+    }
+}
+
+#[cfg(feature="ssr")]
+impl Default for AppData {
+    fn default() -> Self {
+        Self::new()
     }
 }

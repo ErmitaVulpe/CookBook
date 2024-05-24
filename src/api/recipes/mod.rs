@@ -106,7 +106,7 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 ingredients: new_recipe_ingredients,
             } = recipe;
 
-            let result = conn.transaction(move |conn| {
+            let result = conn.transaction(|conn| {
                 {
                     use crate::schema::recipes::dsl::*;
                     insert_into(recipes).values((
@@ -129,9 +129,17 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 }
             });
 
+            if let Err(err) = result {
+                return Err(ServerFnError::new(err.to_string()));
+            }
+
+            let result = app_data.cdn.transaction(|c| {
+                c.create_recipe(&new_recipe_name)
+            });
+
             match result {
-                Ok(_) => Ok(Ok(())),
-                Err(err) => Err(ServerFnError::new(err.to_string())),
+                Ok(()) => Ok(Ok(())),
+                Err(err) => Err(err.into()),
             }
         },
         LoggedStatus::LoggedOut => {
@@ -149,7 +157,7 @@ pub async fn delete_recipes(recipe_names: Vec<String>) -> Result<Result<(), Erro
         LoggedStatus::LoggedIn => {
             let mut conn = app_data.get_conn()?;
 
-            let result = conn.transaction(move |conn| {
+            let result = conn.transaction(|conn| {
                 use crate::schema::recipes::dsl::*;
 
                 diesel::delete(recipes.filter(name.eq_any(&recipe_names)))
@@ -157,9 +165,20 @@ pub async fn delete_recipes(recipe_names: Vec<String>) -> Result<Result<(), Erro
                     .map(|_| ())
             });
 
+            if let Err(err) = result {
+                return Err(ServerFnError::new(err.to_string()));
+            }
+
+            let result = app_data.cdn.transaction(|c| {
+                for recipe in recipe_names {
+                    c.delete_recipe(&recipe)?;
+                }
+                Ok(())
+            });
+
             match result {
-                Ok(_) => Ok(Ok(())),
-                Err(err) => Err(ServerFnError::new(err.to_string())),
+                Ok(()) => Ok(Ok(())),
+                Err(err) => Err(err.into()),
             }
         },
         LoggedStatus::LoggedOut => {
@@ -181,57 +200,27 @@ pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
     result.map_err(|e| ServerFnError::new(e.to_string()))
 }
 
-/// fields:
-/// - r - Recipe name
-/// - d - Image data
-#[server(input = codec::MultipartFormData, output = codec::Cbor)]
-pub async fn upload_icon(data: codec::MultipartData) -> Result<Result<(), Error>, ServerFnError> {
-    let mut data = data.into_inner().unwrap();
 
-    // let app_data = extract_app_data().await?;
+// Maybe some day codec::MultipartFormData will be supported with actix
 
-    while let Ok(Some(mut field)) = data.next_field().await {
-        let name =
-            field.file_name().expect("no filename on field").to_string();
-        while let Ok(Some(chunk)) = field.chunk().await {
-            let len = chunk.len();
-            println!("[{name}]\t{len}");
-            // in a real server function, you'd do something like saving the file here
-        }
-    }
+// /// fields:
+// /// - r - Recipe name
+// /// - d - Image data
+// #[server(input = codec::MultipartFormData, output = codec::Cbor)]
+// pub async fn upload_icon(data: codec::MultipartData) -> Result<Result<(), Error>, ServerFnError> {
+//     let mut data = data.into_inner().unwrap();
 
-    Ok(Ok(()))
-}
+//     // let app_data = extract_app_data().await?;
 
-// #[actix_web::put("/file")]
-// pub async fn put_file(
-//     config: web::Data<Config>, form: MultipartForm<Upload>) -> impl Responder {
-//     const MAX_FILE_SIZE: u64 = 1024 * 1024 * 10; // 10 MB
-//     const MAX_FILE_COUNT: i32 = 1;
-
-//     // reject malformed requests
-//     match form.file.size {
-//         0 => return HttpResponse::BadRequest().finish(),
-//         length if length > MAX_FILE_SIZE.try_into().unwrap() => {
-//             return HttpResponse::BadRequest()
-//                 .body(format!("The uploaded file is too large. Maximum size is {} bytes.", MAX_FILE_SIZE));
-//         },
-//         _ => {}
-//     };
-    
-//     let temp_file_path = form.file.file.path();
-//     let file_name: &str = form
-//         .file
-//         .file_name
-//         .as_ref()
-//         .map(|m| m.as_ref())
-//         .unwrap_or("null");
-
-//     let mut file_path = PathBuf::from(&config.data_path);
-//     file_path.push(&sanitize_filename::sanitize(&file_name));
-
-//     match std::fs::rename(temp_file_path, file_path) {
-//         Ok(_) => HttpResponse::Ok().finish(),
-//         Err(_) => HttpResponse::InternalServerError().finish(),
+//     while let Ok(Some(mut field)) = data.next_field().await {
+//         let name =
+//             field.file_name().expect("no filename on field").to_string();
+//         while let Ok(Some(chunk)) = field.chunk().await {
+//             let len = chunk.len();
+//             println!("[{name}]\t{len}");
+//             // in a real server function, you'd do something like saving the file here
+//         }
 //     }
+
+//     Ok(Ok(()))
 // }
