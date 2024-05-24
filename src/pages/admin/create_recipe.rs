@@ -184,7 +184,7 @@ fn RecipeFormIngredientSelector(
             }>
                 <option
                     value=-1
-                    selected=move || select_ingredient.get() == None
+                    selected=move || select_ingredient.get().is_none()
                 > "-" </option>
                 <For
                     each=derived_ingredients

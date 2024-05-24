@@ -102,7 +102,7 @@ pub fn Admin() -> impl IntoView {
                             Ok(val) => Some(val),
                             Err(err) => {
                                 loading_errors.push(
-                                    format!("Error loading ingredients: {}", err.to_string())
+                                    format!("Error loading ingredients: {}", err)
                                 );
                                 None
                             },
@@ -112,13 +112,13 @@ pub fn Admin() -> impl IntoView {
                             Ok(val) => Some(val),
                             Err(err) => {
                                 loading_errors.push(
-                                    format!("Error loading recipe list: {}", err.to_string())
+                                    format!("Error loading recipe list: {}", err)
                                 );
                                 None
                             },
                         };
 
-                        if loading_errors.len() == 0 {
+                        if loading_errors.is_empty() {
                             // Safe since already checked
                             unsafe { Ok((
                                 ingredients.unwrap_unchecked(),
@@ -253,7 +253,7 @@ pub fn ToolList() -> impl IntoView {
 
 
 #[component]
-pub(self) fn GoBack() -> impl IntoView {
+pub fn GoBack() -> impl IntoView {
     view! {
         <div style="padding: 1rem 0;">
             <A href="/admin"> "<- Go back" </A>
