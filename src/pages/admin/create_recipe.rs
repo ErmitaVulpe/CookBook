@@ -1,8 +1,5 @@
 use leptos::*;
-use web_sys::{
-    File,
-    window,
-};
+use web_sys::File;
 use std::ops::Deref;
 
 use crate::api::{
@@ -32,12 +29,12 @@ pub fn CreateRecipe() -> impl IntoView {
     let selected_ingredients = create_rw_signal(Vec::new());
     let new_recipe_name = create_rw_signal(String::new());
 
-    // let create_recipe = create_action(move |recipe: &Recipe| { 
-    //     let recipe = recipe.clone();
-    //     async move {
-    //         api::recipes::create_recipe(recipe).await
-    //     }
-    // });
+    let create_recipe_message = create_rw_signal(Ok::<String, String>(String::new()));
+
+    let clear_form = move || {
+        form_node.get_untracked().unwrap().deref().reset();
+        selected_ingredients.update(|v| v.clear());
+    };
 
     let create_recipe = create_action(move |recipe: &NewRecipeData| { 
         let recipe = recipe.clone();
@@ -47,32 +44,45 @@ pub fn CreateRecipe() -> impl IntoView {
         } = recipe;
         let recipe_name = recipe.name.clone();
         async move {
+            create_recipe_message.set(Ok("Uploading".to_string()));
+
             match api::recipes::create_recipe(recipe).await {
-                Err(err) => return Err(err),
-                Ok(Err(err)) => return Ok(Err(err)),
-                _ => {},
+                Err(err) => {
+                    create_recipe_message.set(Err(format!("Error creating a recipe: {err}")));
+                    return;
+                },
+                Ok(Err(err)) => {
+                    create_recipe_message.set(match err {
+                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
+                    });
+                    return;
+                },
+                Ok(Ok(())) => {},
             }
 
-            let window = window().unwrap();
-            let location = window.location();
+            let result = api::img::upload_icon(&recipe_name, &icon).await;
+            match result {
+                Err(err) => {
+                    create_recipe_message.set(Err(format!("Error creating a recipe: {err}")));
+                    return;
+                },
+                Ok(Err(err)) => {
+                    create_recipe_message.set(match err {
+                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
+                    });
+                    return;
+                },
+                Ok(Ok(())) => {
+                    clear_form();
+                    recipe_names.update(|r| r.0.push(new_recipe_name.get_untracked()));
+                },
+            }
 
-            let host = format!(
-                "{}//{}",
-                location.protocol().unwrap(),
-                location.host().unwrap(),
-            );
-
-            api::img::upload_icon(&host, &recipe_name, &icon).await
+            create_recipe_message.set(Ok("Recipe created successfully".to_string()));
         }
     });
 
-    let clear_form = move || {
-        form_node.get().unwrap().deref().reset();
-        selected_ingredients.update(|v| v.clear());
-    };
-
     let disabled = create_recipe.pending();
-    let result = create_recipe.value();
 
     view! {
         <GoBack />
@@ -140,17 +150,10 @@ pub fn CreateRecipe() -> impl IntoView {
             >
                 "Create recipe"
             </button>
-            {move || result.get().map(|x| match x {
-                Ok(Ok(())) => {
-                    clear_form();
-                    recipe_names.update(|r| r.0.push(new_recipe_name.get_untracked()));
-                    view! {<p> "Recipe created successfully" </p>}
-                },
-                Ok(Err(err)) => view! {<p style="color:red;"> {match err {
-                    Error::Unauthorized => "Session expired please refresh the site"
-                }} </p>},
-                Err(err) => view! {<p style="color:red;"> {format!("Error creating a recipe:\n{err}")} </p>},
-            })}
+            {move || match create_recipe_message.get() {
+                Ok(val) => view! {<p> {val} </p>},
+                Err(err) => view! {<p style="color:red;"> {err} </p>},
+            }}
         </form>
     }
 }

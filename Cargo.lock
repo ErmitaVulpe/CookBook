@@ -755,6 +755,7 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "webp",
+ "xxhash-rust",
 ]
 
 [[package]]

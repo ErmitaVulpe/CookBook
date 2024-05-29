@@ -1,7 +1,11 @@
 use actix_web::HttpResponse;
 use serde_repr::*;
 use std::{
-    collections::HashMap, fs::{self, OpenOptions}, io::{Seek, SeekFrom, Write}, sync::RwLock
+    collections::HashMap,
+    fs::{self, OpenOptions},
+    fmt,
+    io::{Seek, SeekFrom, Write},
+    sync::RwLock,
 };
 use leptos::ServerFnError;
 
@@ -17,18 +21,33 @@ pub enum CdnError {
     InternalError,
 }
 
-#[allow(clippy::from_over_into)] // Don't need the reverse
-impl Into<ServerFnError> for CdnError {
-    fn into(self) -> ServerFnError {
-        match self {
-            CdnError::AlreadyExists => ServerFnError::Args(String::from("Already Exists")),
-            CdnError::RecipeDoesntExist => ServerFnError::Args(String::from("Recipe doesn't exist")),
-            CdnError::UnsupportedImageFormat => ServerFnError::Args(String::from("Unsupported image format")),
-            CdnError::InternalError => ServerFnError::new("Internal server error"),
-            CdnError::InvalidName => ServerFnError::Args(String::from("Inavlid name")),
-        }
+impl fmt::Display for CdnError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", match self {
+            CdnError::AlreadyExists => "Already exists",
+            CdnError::RecipeDoesntExist => "Recipe doesn't exist",
+            CdnError::UnsupportedImageFormat => "Unsupported image format",
+            CdnError::InvalidName => "Invalid name",
+            CdnError::InternalError => "Internal error",
+        })
     }
 }
+
+impl std::error::Error for CdnError {}
+
+// TODO Check if errors bubble up correctly
+// #[allow(clippy::from_over_into)] // Don't need the reverse
+// impl Into<ServerFnError> for CdnError {
+//     fn into(self) -> ServerFnError {
+//         match self {
+//             CdnError::AlreadyExists => ServerFnError::Args(String::from("Already Exists")),
+//             CdnError::RecipeDoesntExist => ServerFnError::Args(String::from("Recipe doesn't exist")),
+//             CdnError::UnsupportedImageFormat => ServerFnError::Args(String::from("Unsupported image format")),
+//             CdnError::InternalError => ServerFnError::new("Internal server error"),
+//             CdnError::InvalidName => ServerFnError::Args(String::from("Inavlid name")),
+//         }
+//     }
+// }
 
 #[allow(clippy::from_over_into)] // Don't need the reverse
 impl Into<HttpResponse> for CdnError {
@@ -45,7 +64,7 @@ impl Into<HttpResponse> for CdnError {
 
 #[derive(Debug)]
 pub struct Cdn {
-    path: String,
+    pub path: String,
     // Key is recipe name, value is next image id
     meta: RwLock<HashMap<String, u32>>,
     meta_file_handle: RwLock<fs::File>,
@@ -91,6 +110,25 @@ impl Cdn {
 
         callback(&manager)?;
         manager.dump_meta()
+    }
+
+    pub fn get_image_list(&self, recipe_name: &str) -> Result<Vec<String>, CdnError> {
+        let entries = fs::read_dir(format!("{}{}", &self.path, recipe_name))
+            .map_err(|_| CdnError::RecipeDoesntExist)?;
+        
+        let mut image_list = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|_| CdnError::InternalError)?;
+            let path = entry.path();
+
+            if let Some(file_name) = path.file_name() {
+                if let Some(file_name_str) = file_name.to_str() {
+                    image_list.push(file_name_str.to_string());
+                }
+            }
+        }
+
+        Ok(image_list)
     }
 }
 
@@ -141,7 +179,6 @@ impl<'a> CdnTransactionManager<'a> {
     pub fn delete_recipe(&self, recipe_name: &str) -> Result<(), CdnError> {
         let exists = {
             self.meta.read()
-                .inspect(|x| println!("{x:#?}"))
                 .map_err(|_| CdnError::InternalError)?
                 .contains_key(recipe_name)
         };
@@ -162,7 +199,6 @@ impl<'a> CdnTransactionManager<'a> {
     pub fn upload_icon(&self, recipe_name: &str, icon_data: &[u8]) -> Result<(), CdnError> {
         let exists = {
             self.meta.read()
-                .inspect(|x| println!("{x:#?}"))
                 .map_err(|_| CdnError::InternalError)?
                 .contains_key(recipe_name)
         };
@@ -172,6 +208,39 @@ impl<'a> CdnTransactionManager<'a> {
 
         let webp_buffer = convert_to_webp(icon_data)?;
         let mut file = fs::File::create(format!("{}{recipe_name}/icon", self.path))
+            .map_err(|_| CdnError::InternalError)?;
+        file.write_all(&webp_buffer)
+            .map_err(|_| CdnError::InternalError)?;
+
+        Ok(())
+    }
+
+    pub fn upload_image(&self, recipe_name: &str, image_data: &[u8]) -> Result<(), CdnError> {
+        let exists = {
+            self.meta.read()
+                .map_err(|_| CdnError::InternalError)?
+                .contains_key(recipe_name)
+        };
+        if !exists {
+            return Err(CdnError::RecipeDoesntExist);
+        }
+
+        let next_index = {
+            let mut write_lock = self.meta.write()
+                .map_err(|_| CdnError::InternalError)?;
+            
+            let mut next_index = 0;
+            write_lock.entry(recipe_name.to_string())
+                .and_modify(|i| { 
+                    next_index = *i;
+                    *i += 1;
+                });
+            
+            next_index
+        };
+
+        let webp_buffer = convert_to_webp(image_data)?;
+        let mut file = fs::File::create(format!("{}{recipe_name}/{next_index}", self.path))
             .map_err(|_| CdnError::InternalError)?;
         file.write_all(&webp_buffer)
             .map_err(|_| CdnError::InternalError)?;
@@ -196,7 +265,7 @@ fn convert_to_webp(buffer: &[u8]) -> Result<Vec<u8>, CdnError> {
 
     let encoder = Encoder::from_image(&img)
         .map_err(|_| CdnError::UnsupportedImageFormat)?;
-    let webp_data = encoder.encode(70.0); // 100.0 for maximum quality
+    let webp_data = encoder.encode(70.0);
 
     Ok(webp_data.to_vec())
 }

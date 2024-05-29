@@ -19,6 +19,8 @@ pub fn App() -> impl IntoView {
                     <Route path="/admin" view=admin::Admin>
                         <Route path="" view=admin::ToolList/>
                         <Route path="/create_recipe" view=admin::create_recipe::CreateRecipe/>
+                        <Route path="/upload_image" view=admin::images::upload_image::UploadImage/>
+                        <Route path="/delete_image" view=admin::images::delete_image::DeleteImage/>
                         <Route path="/delete_recipe" view=admin::delete_recipe::DeleteRecipe/>
                     </Route>
                     <Route path="/*any" view=not_found::NotFound/>

@@ -1,5 +1,6 @@
 pub mod create_recipe;
 pub mod delete_recipe;
+pub mod images;
 
 use leptos::*;
 use leptos_router::*;
@@ -245,6 +246,8 @@ pub fn ToolList() -> impl IntoView {
     view! {
         <ul>
             <li><A href="create_recipe"> "Create a recipe" </A></li>
+            <li><A href="upload_image"> "Upload images" </A></li>
+            <li><A href="delete_image"> "Delete images" </A></li>
             <li><A href="delete_recipe"> "Delete recipes" </A></li>
             // <li><A href=""> "" </A></li>
         </ul>

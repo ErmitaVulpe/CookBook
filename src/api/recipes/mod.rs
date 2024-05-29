@@ -129,6 +129,14 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 }
             });
 
+            use diesel::result::{DatabaseErrorKind::UniqueViolation, Error::DatabaseError};
+            match result {
+                Err(DatabaseError(UniqueViolation, _)) => 
+                    return Err(ServerFnError::new("Recipe with this name already exists".to_string())),
+                Err(err) => return Err(ServerFnError::new(err.to_string())),
+                _ => {},
+            }
+
             if let Err(err) = result {
                 return Err(ServerFnError::new(err.to_string()));
             }
@@ -198,6 +206,13 @@ pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
         .load::<String>(&mut conn);
 
     result.map_err(|e| ServerFnError::new(e.to_string()))
+}
+
+#[server(input = codec::GetUrl, output = codec::Cbor)]
+pub async fn get_images_for_recipe(recipe_name: String) -> Result<Vec<String>, ServerFnError> {
+    let app_data = extract_app_data().await?;
+    let images = app_data.cdn.get_image_list(&recipe_name)?;
+    Ok(images)
 }
 
 
