@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[cfg(feature="ssr")]
 use actix_web::{
     Error as ActixError,
@@ -249,6 +247,8 @@ pub async fn delete_images(recipe_name: String, image_names: Vec<String>) -> Res
             let cdn = &app_data.cdn;
             let image_list = cdn.get_image_list(&recipe_name)?;
             { // Check if all image_names are in image_list
+                use std::collections::HashSet;
+                
                 let set = image_list.iter().collect::<HashSet<_>>();
                 if !image_names.iter().all(|i| set.contains(i)) {
                     return Err(CdnError::ImageDoesntExist.into());
