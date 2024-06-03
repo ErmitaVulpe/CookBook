@@ -21,33 +21,34 @@ pub fn DeleteImage() -> impl IntoView {
         selected_recipe.set(None);
     };
 
-    let delete_images = create_action(move |_: &()| {
+    let delete_images = create_action(move |image_list: &Vec<String>| {
         delete_message.set(Ok("Deleting".to_string()));
 
         let recipe_name = selected_recipe.get_untracked().unwrap();
+        let image_list = image_list.clone();
         async move {
 
-            // let result = api::img::upload_images(
-            //     &recipe_name,
-            //     &file_list,
-            // ).await;
+            let result = api::img::delete_images(
+                recipe_name,
+                image_list,
+            ).await;
 
-            // match result {
-            //     Err(err) => {
-            //         delete_message.set(Err(format!("Error creating a recipe: {err}")));
-            //         return;
-            //     },
-            //     Ok(Err(err)) => {
-            //         delete_message.set(match err {
-            //             Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
-            //         });
-            //         return;
-            //     },
-            //     Ok(Ok(())) => clear_form(),
-            // }
+            match result {
+                Err(err) => {
+                    delete_message.set(Err(format!("Error deleting images: {err}")));
+                    return;
+                },
+                Ok(Err(err)) => {
+                    delete_message.set(match err {
+                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
+                    });
+                    return;
+                },
+                Ok(Ok(())) => {},
+            }
 
             clear_form();
-            delete_message.set(Ok("Images uploaded successfully".to_string()));
+            delete_message.set(Ok("Images deleted successfully".to_string()));
         }
     });
 
@@ -70,7 +71,12 @@ pub fn DeleteImage() -> impl IntoView {
             node_ref=form_node
             on:submit=move |ev| {
                 ev.prevent_default();
-                delete_images.dispatch(());
+                let owned_image_list = selected_images
+                    .get_untracked()
+                    .iter()
+                    .map(|x: &String| x.to_owned())
+                    .collect::<Vec<_>>();
+                delete_images.dispatch(owned_image_list);
             }
         >
             <h5> "Select recipe" </h5>

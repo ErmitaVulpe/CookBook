@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[cfg(feature="ssr")]
 use actix_web::{
     Error as ActixError,
@@ -11,12 +13,19 @@ use actix_web::{
 use actix_multipart::Multipart;
 #[cfg(feature="ssr")]
 use futures_util::TryStreamExt as _;
-use leptos::ServerFnError;
-use server_fn::error::NoCustomError;
+use leptos::{server, ServerFnError};
+use server_fn::{codec, error::NoCustomError};
 use web_sys::{FormData, File, window};
 
 #[cfg(feature="ssr")]
-use super::auth::{check_if_logged, LoggedStatus};
+use crate::cdn::CdnError;
+
+#[cfg(feature="ssr")]
+use super::{
+    auth::{check_if_logged, LoggedStatus},
+    extract_app_data,
+};
+use super::Error;
 
 #[cfg(feature="ssr")]
 pub fn api(cfg: &mut web::ServiceConfig) {
@@ -227,4 +236,27 @@ pub async fn upload_images(recipe_name: &str, images: &[File]) -> Result<Result<
     }
 }
 
-// TODO delete images
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn delete_images(recipe_name: String, image_names: Vec<String>) -> Result<Result<(), Error>, ServerFnError> {
+    let app_data = extract_app_data().await?;
+    let request = leptos::expect_context::<actix_web::HttpRequest>();
+
+    match check_if_logged(&app_data.jwt, &request) {
+        LoggedStatus::LoggedOut => {
+            Ok(Err(Error::Unauthorized))
+        },
+        LoggedStatus::LoggedIn => {
+            let cdn = &app_data.cdn;
+            let image_list = cdn.get_image_list(&recipe_name)?;
+            { // Check if all image_names are in image_list
+                let set = image_list.iter().collect::<HashSet<_>>();
+                if !image_names.iter().all(|i| set.contains(i)) {
+                    return Err(CdnError::ImageDoesntExist.into());
+                }
+            }
+            cdn.delete_images(&recipe_name, &image_names)?;
+
+            Ok(Ok(()))
+        },
+    }
+}

@@ -7,7 +7,6 @@ use std::{
     io::{Seek, SeekFrom, Write},
     sync::RwLock,
 };
-use leptos::ServerFnError;
 
 pub const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MiB
 
@@ -16,6 +15,7 @@ pub const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MiB
 pub enum CdnError {
     AlreadyExists,
     RecipeDoesntExist,
+    ImageDoesntExist,
     UnsupportedImageFormat,
     InvalidName,
     InternalError,
@@ -26,6 +26,7 @@ impl fmt::Display for CdnError {
         write!(f, "{}", match self {
             CdnError::AlreadyExists => "Already exists",
             CdnError::RecipeDoesntExist => "Recipe doesn't exist",
+            CdnError::ImageDoesntExist => "image doesn't exist",
             CdnError::UnsupportedImageFormat => "Unsupported image format",
             CdnError::InvalidName => "Invalid name",
             CdnError::InternalError => "Internal error",
@@ -35,26 +36,13 @@ impl fmt::Display for CdnError {
 
 impl std::error::Error for CdnError {}
 
-// TODO Check if errors bubble up correctly
-// #[allow(clippy::from_over_into)] // Don't need the reverse
-// impl Into<ServerFnError> for CdnError {
-//     fn into(self) -> ServerFnError {
-//         match self {
-//             CdnError::AlreadyExists => ServerFnError::Args(String::from("Already Exists")),
-//             CdnError::RecipeDoesntExist => ServerFnError::Args(String::from("Recipe doesn't exist")),
-//             CdnError::UnsupportedImageFormat => ServerFnError::Args(String::from("Unsupported image format")),
-//             CdnError::InternalError => ServerFnError::new("Internal server error"),
-//             CdnError::InvalidName => ServerFnError::Args(String::from("Inavlid name")),
-//         }
-//     }
-// }
-
 #[allow(clippy::from_over_into)] // Don't need the reverse
 impl Into<HttpResponse> for CdnError {
     fn into(self) -> HttpResponse {
         match self {
             CdnError::AlreadyExists => HttpResponse::Conflict().finish(),
             CdnError::RecipeDoesntExist => HttpResponse::NotFound().finish(),
+            CdnError::ImageDoesntExist => HttpResponse::NotFound().finish(),
             CdnError::UnsupportedImageFormat => HttpResponse::NotImplemented().finish(),
             CdnError::InternalError => HttpResponse::InternalServerError().finish(),
             CdnError::InvalidName => HttpResponse::BadRequest().finish(),
@@ -129,6 +117,19 @@ impl Cdn {
         }
 
         Ok(image_list)
+    }
+
+    pub fn delete_images(&self, recipe_name: &str, image_names: &[String]) -> Result<(), CdnError> {
+        for name in image_names {
+            let file_path = format!("{}{}/{}", &self.path, recipe_name, name);
+            if fs::metadata(&file_path).is_err() {
+                return Err(CdnError::ImageDoesntExist);
+            }
+            fs::remove_file(&file_path)
+                .map_err(|_| CdnError::InternalError)?;
+        }
+
+        Ok(())
     }
 }
 
