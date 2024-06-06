@@ -5,8 +5,9 @@ use crate::api::{
     self,
     Error,
 };
+use crate::app::RecipeNamesContext;
 
-use super::{GoBack, RecipeNamesContext};
+use super::GoBack;
 
 #[component]
 pub fn DeleteRecipe() -> impl IntoView {

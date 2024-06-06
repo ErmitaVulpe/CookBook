@@ -101,7 +101,7 @@ impl Cdn {
     }
 
     pub fn get_image_list(&self, recipe_name: &str) -> Result<Vec<String>, CdnError> {
-        let entries = fs::read_dir(format!("{}{}", &self.path, recipe_name))
+        let entries = fs::read_dir(format!("{}{}", &self.path, recipe_name.to_lowercase()))
             .map_err(|_| CdnError::RecipeDoesntExist)?;
         
         let mut image_list = Vec::new();
@@ -158,21 +158,23 @@ impl<'a> CdnTransactionManager<'a> {
     }
 
     pub fn create_recipe(&self, recipe_name: &str) -> Result<(), CdnError> {
+        let recipe_name = recipe_name.to_lowercase();
+
         let already_exists = {
             self.meta.read()
                 .map_err(|_| CdnError::InternalError)?
-                .contains_key(recipe_name)
+                .contains_key(&recipe_name)
         };
         if already_exists {
             return Err(CdnError::AlreadyExists);
         }
 
-        fs::create_dir(format!("{}{}", self.path, recipe_name))
+        fs::create_dir(format!("{}{}", self.path, &recipe_name))
             .map_err(|_| CdnError::InternalError)?;
 
         self.meta.write()
             .map_err(|_| CdnError::InternalError)?
-            .insert(String::from(recipe_name), 0);
+            .insert(String::from(&recipe_name), 0);
 
         Ok(())
     }

@@ -6,7 +6,12 @@ use leptos::server_fn::codec;
 use serde::{Deserialize, Serialize};
 
 pub mod models;
-pub use models::{Ingredient, Recipe as DbRecipe, RecipeIngredients};
+pub use models::{
+    Ingredient,
+    Recipe as DbRecipe,
+    RecipeIngredients,
+    IngredientWithAmount
+};
 use super::Error;
 
 #[cfg(feature = "ssr")]
@@ -27,13 +32,7 @@ pub struct Recipe {
     pub ingredients: Vec<IngredientWithAmount>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct IngredientWithAmount {
-    #[serde(rename = "id")]
-    pub ingredient_id: i32,
-    #[serde(rename = "a")]
-    pub ammount: String,
-}
+
 
 #[cfg(feature = "ssr")]
 impl IngredientWithAmount {
@@ -59,6 +58,44 @@ pub struct OwnedIngredientWithAmount {
 
 
 #[server(input = codec::GetUrl, output = codec::Cbor)]
+pub async fn get_recipe(recipe_name: String) -> Result<Option<Recipe>, ServerFnError> {
+    let app_data = extract_app_data().await?;
+    let mut conn = app_data.get_conn()?;
+
+    let recipe = {
+        use crate::schema::recipes::dsl::*;
+
+        let result = recipes
+            .find(&recipe_name)
+            .select(models::Recipe::as_select())
+            .first(&mut conn)
+            .optional()
+            .map_err(|e| ServerFnError::new(e.to_string()))?;
+
+        match result {
+            Some(val) => val,
+            None => return Ok(None),
+        }
+    };
+
+    let ingredients = {
+        use crate::schema::recipe_ingredients::dsl;
+
+        dsl::recipe_ingredients
+            .filter(dsl::recipe_name.eq(&recipe_name))
+            .select(IngredientWithAmount::as_select())
+            .load(&mut conn)
+            .map_err(|e| ServerFnError::new(e.to_string()))?
+    };
+
+    Ok(Some(Recipe {
+        name: recipe_name,
+        instructions: recipe.instructions,
+        ingredients,
+    }))
+}
+
+#[server(input = codec::GetUrl, output = codec::Cbor)]
 pub async fn get_ingredients() -> Result<Vec<Ingredient>, ServerFnError> {
     use crate::schema::ingredients::dsl::*;
 
@@ -82,7 +119,7 @@ pub async fn get_recipe_ingredients(name: String) -> Result<Vec<RecipeIngredient
     let mut conn = app_data.get_conn()?;
 
     let result = recipe_ingredients
-        .filter(recipe_name.eq(name))
+        .filter(recipe_name.eq(name.to_lowercase()))
         .select(RecipeIngredients::as_select())
         .load(&mut conn);
 
@@ -164,6 +201,10 @@ pub async fn delete_recipes(recipe_names: Vec<String>) -> Result<Result<(), Erro
     match check_if_logged(&app_data.jwt, &request) {
         LoggedStatus::LoggedIn => {
             let mut conn = app_data.get_conn()?;
+            let recipe_names = recipe_names
+                .iter()
+                .map(|s| s.to_lowercase())
+                .collect::<Vec<_>>();
 
             let result = conn.transaction(|conn| {
                 use crate::schema::recipes::dsl::*;

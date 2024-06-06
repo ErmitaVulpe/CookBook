@@ -7,8 +7,9 @@ use crate::api::{
     Error,
     recipes::{Recipe, IngredientWithAmount},
 };
+use crate::app::{IngredientsContext, RecipeNamesContext};
 
-use super::{GoBack, IngredientsContext, RecipeNamesContext};
+use super::GoBack;
 
 #[derive(Clone, Debug)]
 struct NewRecipeData {

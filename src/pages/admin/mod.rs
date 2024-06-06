@@ -10,13 +10,9 @@ use std::collections::BTreeMap;
 use crate::api::{
     self,
     auth::{LoggedStatus, UserRaw},
-    recipes::Ingredient,
 };
+use crate::app::{IngredientsContext, RecipeNamesContext};
 
-#[derive(Clone, Debug)]
-pub struct IngredientsContext(BTreeMap<i32, Ingredient>);
-#[derive(Clone, Debug)]
-pub struct RecipeNamesContext(Vec<String>);
 
 #[component]
 pub fn Admin() -> impl IntoView {

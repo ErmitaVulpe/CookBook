@@ -108,6 +108,8 @@ async fn upload_icon_private(
         }
     }
 
+    recipe_name = recipe_name.to_lowercase();
+
     let result = app_data.cdn.transaction(|cdn| {
         cdn.upload_icon(&recipe_name, &raw_icon_bytes)
     });
@@ -127,7 +129,7 @@ pub async fn upload_icon(recipe_name: &str, icon: &File) -> Result<Result<(), su
     );
 
     let form_data = FormData::new().unwrap();
-    form_data.append_with_str("r", recipe_name).unwrap();
+    form_data.append_with_str("r", &recipe_name.to_lowercase()).unwrap();
     form_data.append_with_blob("d", icon).unwrap();
     let resp = reqwasm::http::Request::put(&url)
         .body(form_data)
@@ -188,6 +190,8 @@ async fn upload_images_private(
         }
     }
 
+    recipe_name = recipe_name.to_lowercase();
+
     let result = app_data.cdn.transaction(|cdn| {
         for image in raw_image_bytes {
             cdn.upload_image(&recipe_name, &image)?
@@ -244,6 +248,7 @@ pub async fn delete_images(recipe_name: String, image_names: Vec<String>) -> Res
             Ok(Err(Error::Unauthorized))
         },
         LoggedStatus::LoggedIn => {
+            let recipe_name = recipe_name.to_lowercase();
             let cdn = &app_data.cdn;
             let image_list = cdn.get_image_list(&recipe_name)?;
             { // Check if all image_names are in image_list

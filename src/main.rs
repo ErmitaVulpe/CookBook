@@ -21,6 +21,52 @@ async fn main() -> std::io::Result<()> {
     let leptos_options_data = web::Data::new(leptos_options.clone());
     let site_root = leptos_options.site_root.to_owned();
 
+
+    {
+        use diesel::prelude::*;
+
+        let mut conn = app_data.get_conn().unwrap();
+
+        {
+            #[derive(Debug, Clone, Queryable, Selectable)]
+            #[diesel(table_name = cook_book::schema::recipes)]
+            #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+            struct Recipe {
+                #[allow(dead_code)]
+                name: String,
+                #[allow(dead_code)]
+                instructions: String,
+            }
+
+            use cook_book::schema::recipes::dsl::*;
+            let result = recipes
+                .select(Recipe::as_select())
+                .load::<Recipe>(&mut conn);
+            println!("{:#?}", result);
+        }
+        {
+            #[derive(Debug, Clone, Queryable, Selectable)]
+            #[diesel(table_name = cook_book::schema::recipe_ingredients)]
+            #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+            struct RecipeIngredient {
+                #[allow(dead_code)]
+                id: i32,
+                #[allow(dead_code)]
+                recipe_name: String,
+                #[allow(dead_code)]
+                ingredient_id: i32,
+                #[allow(dead_code)]
+                ammount: String,
+            }
+
+            use cook_book::schema::recipe_ingredients::dsl::*;
+            let result = recipe_ingredients
+                .select(RecipeIngredient::as_select())
+                .load::<RecipeIngredient>(&mut conn);
+            println!("{:#?}", result);
+        }
+    }
+
     HttpServer::new(move || {
         App::new()
             // serve JS/WASM/CSS from `pkg`

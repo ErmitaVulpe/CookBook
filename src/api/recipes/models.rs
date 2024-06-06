@@ -28,9 +28,10 @@ pub struct Ingredient {
 
 
 #[cfg(feature = "ssr")]
-#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Selectable)]
+#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = crate::schema::recipes)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(primary_key(name))]
 pub struct Recipe {
     #[serde(rename = "n")]
     pub name: String,
@@ -49,8 +50,10 @@ pub struct Recipe {
 
 
 #[cfg(feature = "ssr")]
-#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Selectable, Identifiable)]
+#[derive(Debug, Clone, Deserialize, Serialize, Associations, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = crate::schema::recipe_ingredients)]
+#[diesel(belongs_to(Recipe, foreign_key=recipe_name))]
+#[diesel(belongs_to(Ingredient))]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 #[diesel(primary_key(id))]
 pub struct RecipeIngredients {
@@ -72,6 +75,25 @@ pub struct RecipeIngredients {
     #[serde(rename = "n")]
     pub recipe_name: String,
     #[serde(rename = "i")]
+    pub ingredient_id: i32,
+    #[serde(rename = "a")]
+    pub ammount: String,
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Clone, Debug, Deserialize, Serialize, Queryable, Selectable)]
+#[diesel(table_name = crate::schema::recipe_ingredients)]
+pub struct IngredientWithAmount {
+    #[serde(rename = "id")]
+    pub ingredient_id: i32,
+    #[serde(rename = "a")]
+    pub ammount: String,
+}
+
+#[cfg(not(feature = "ssr"))]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct IngredientWithAmount {
+    #[serde(rename = "id")]
     pub ingredient_id: i32,
     #[serde(rename = "a")]
     pub ammount: String,

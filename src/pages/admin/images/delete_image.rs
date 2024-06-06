@@ -119,7 +119,8 @@ pub fn DeleteImage() -> impl IntoView {
                                             let input_node = create_node_ref::<html::Input>();
                                             let url_prefix = Arc::clone(&url_prefix);
                                             let preview_url = format!(
-                                                "{url_prefix}{}",
+                                                "{}{}",
+                                                url_prefix.to_lowercase(),
                                                 image_name,
                                             );
 

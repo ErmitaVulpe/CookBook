@@ -9,6 +9,7 @@ use {
 pub mod app;
 pub mod api;
 pub mod pages;
+pub mod md_parser;
 
 #[cfg(feature = "ssr")]
 pub mod auth;

@@ -1,5 +1,7 @@
 use leptos::*;
-use super::{GoBack, RecipeNamesContext};
+
+use crate::app::RecipeNamesContext;
+use super::GoBack;
 
 pub mod delete_image;
 pub mod upload_image;

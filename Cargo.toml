@@ -24,6 +24,7 @@ leptos_actix = { version = "0.6", optional = true }
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
 libsqlite3-sys = { version = "0.28.0", features = ["bundled", "bundled-windows"], optional = true }
+pulldown-cmark = { version = "0.11.0", features = ["simd"] }
 rand = { version = "0.8.5" }
 reqwasm = "0.5.0"
 serde = "1.0.200"
