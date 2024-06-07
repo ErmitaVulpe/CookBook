@@ -135,13 +135,21 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
 
     match check_if_logged(&app_data.jwt, &request) {
         LoggedStatus::LoggedIn => {
-            let mut conn = app_data.get_conn()?;
-
             let Recipe {
                 name: new_recipe_name,
                 instructions: new_recipe_instructions,
                 ingredients: new_recipe_ingredients,
             } = recipe;
+
+            let result = app_data.cdn.transaction(|c| {
+                c.create_recipe(&new_recipe_name)
+            });
+
+            if let Err(err) = result {
+                return Err(ServerFnError::new(err.to_string()));
+            }
+
+            let mut conn = app_data.get_conn()?;
 
             let result = conn.transaction(|conn| {
                 {
@@ -173,14 +181,6 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 Err(err) => return Err(ServerFnError::new(err.to_string())),
                 _ => {},
             }
-
-            if let Err(err) = result {
-                return Err(ServerFnError::new(err.to_string()));
-            }
-
-            let result = app_data.cdn.transaction(|c| {
-                c.create_recipe(&new_recipe_name)
-            });
 
             match result {
                 Ok(()) => Ok(Ok(())),
@@ -251,9 +251,14 @@ pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
 
 #[server(input = codec::GetUrl, output = codec::Cbor)]
 pub async fn get_images_for_recipe(recipe_name: String) -> Result<Vec<String>, ServerFnError> {
+    use crate::cdn::CdnError;
+
     let app_data = extract_app_data().await?;
-    let images = app_data.cdn.get_image_list(&recipe_name)?;
-    Ok(images)
+    match app_data.cdn.get_image_list(&recipe_name) {
+        Ok(val) => Ok(val),
+        Err(CdnError::RecipeDoesntExist) => Ok(Vec::new()),
+        Err(err) => Err(err.into()),
+    }
 }
 
 

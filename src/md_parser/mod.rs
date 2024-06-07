@@ -25,8 +25,6 @@ where I: Iterator<Item = Event<'a>> {
     let mut elements = Vec::new();
 
     while let Some(item) = iter.next() {
-        println!("{item:?}");
-
         match item {
             Event::Start(tag) => {
                 let children = parse_recursively(iter, Some(tag.clone().into()));
@@ -93,23 +91,26 @@ where I: Iterator<Item = Event<'a>> {
                                 href=dest_url.to_string()
                                 id=id.to_string()
                                 title=title.to_string()
+                                target="_blank"
                             >{children}</a>
                         }.into_view(),
                     },
                     Tag::Image { link_type: _, dest_url, title, id } => view! {
-                        {println!("asd: {children:#?}")}
                         <img
                             src=dest_url.to_string()
-                            title=title.to_string()
-                            id=id.to_string()
-                            alt= match children.into_view() {
-                                View::Text(val) => Some(val.content.to_string()),
-                                // _ => None,
-                                View::Element(_) => todo!(),
-                                View::Suspense(_, _) => todo!(),
-                                View::Component(_) => todo!(), // TODO continue
-                                View::Transparent(_) => todo!(),
-                                View::CoreComponent(_) => todo!(),
+                            title=if title.is_empty() {
+                                None
+                            } else {
+                                Some(title.to_string())
+                            }
+                            id=if id.is_empty() {
+                                None
+                            } else {
+                                Some(id.to_string())
+                            }
+                            alt=match &children.first() {
+                                Some(View::Text(val)) => Some(val.content.to_string()),
+                                _ => None,
                             }
                         />
                     }.into_view(),

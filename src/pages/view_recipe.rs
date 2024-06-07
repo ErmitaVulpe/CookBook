@@ -29,7 +29,10 @@ pub fn ViewRecipe() -> impl IntoView {
     let recipe_data = create_resource(
         recipe_name,
         move |recipe_name| async {
-            api::recipes::get_recipe(recipe_name).await
+            Ok((
+                api::recipes::get_recipe(recipe_name.clone()).await?,
+                api::recipes::get_images_for_recipe(recipe_name).await?
+            ))
         },
     );
 
@@ -37,18 +40,20 @@ pub fn ViewRecipe() -> impl IntoView {
         <Suspense
             fallback=move || view! { <p>"Loading..."</p> }
         >{move || {
-            recipe_data.get().map(|recipe_data| {
+            recipe_data.get().map(|recipe_data: Result<(Option<Recipe>, Vec<String>), ServerFnError>| {
                 match recipe_data {
                     Err(err) => view! {
                         <p style="color:red;"> {format!("Error loading recipe: {err}")} </p>
                     }.into_view(),
-                    Ok(None) => view! {
+                    Ok((None, _)) => view! {
                         <super::not_found::NotFound /> // TODO figure out why it doesnt return 404
                     },
-                    Ok(Some(recipe_data)) => {
+                    Ok((Some(recipe_data), mut images)) => {
+                        images.retain(|e| e != "icon");
                         view! {
                             <ViewRecipeComponent
                                 recipe_data=recipe_data
+                                image_list=images
                             />
                         }
                     }
@@ -61,6 +66,7 @@ pub fn ViewRecipe() -> impl IntoView {
 #[component]
 pub fn ViewRecipeComponent(
     recipe_data: Recipe,
+    image_list: Vec<String>,
 ) -> impl IntoView {
     let recipe_data = Arc::new(recipe_data);
     let img_url_prefix = format!(
@@ -97,7 +103,7 @@ pub fn ViewRecipeComponent(
     let icon_url = format!("{img_url_prefix}icon");
 
     view! {
-        <Meta property="og:title" content=format!("{}", &recipe_data.name)/>
+        <Meta property="og:title" content=recipe_data.name.clone()/>
         <Meta property="og:type" content="website"/>
         <Meta property="og:image" content=icon_url.clone()/>
         <Meta property="og:url" content=format!("/r/{}", &recipe_data.name)/>
@@ -108,7 +114,7 @@ pub fn ViewRecipeComponent(
             style="max-width:66%;"
             alt="Icon"
         />
-        <p> "Ingredients:" </p>
+        <h5> "Ingredients:" </h5>
         {if recipe_data.ingredients.is_empty() {
             ().into_view()
         } else {
@@ -132,7 +138,7 @@ pub fn ViewRecipeComponent(
                 </ErrorBoundary>
             }.into_view()
         }}
-        <p> "Instruction:" </p>
+        <h5> "Instruction:" </h5>
         {
             use crate::md_parser::{Options, parse};
 
@@ -140,6 +146,12 @@ pub fn ViewRecipeComponent(
             options.insert(Options::ENABLE_STRIKETHROUGH);
 
             parse(&recipe_data.instructions, options)
+        }
+        <h5> "Gallery:" </h5>
+        {
+            image_list.iter()
+                .map(|i| view! {<img src=format!("{img_url_prefix}{i}")/>})
+                .collect_view()
         }
     }
 }
