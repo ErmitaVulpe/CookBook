@@ -1,0 +1,11 @@
+.dockerignore
+.git
+.vscode
+.gitignore
+build
+target
+db.sqlite
+dockefile
+LICENSE
+README.md
+todo.md
