@@ -146,6 +146,16 @@ pub fn CreateRecipe() -> impl IntoView {
                 />
             </div>
             <button
+                type="button"
+                on:click=|_| {
+                    web_sys::window().unwrap().open_with_url_and_target_and_features(
+                        "/admin/create_recipe/preview",
+                        "_blank",
+                        "popup"
+                    ).unwrap();
+                }
+            > "Preview" </button>
+            <button
                 type="submit"
                 prop:disabled=move || disabled.get()
             >
@@ -259,3 +269,14 @@ fn RecipeFormIngredientSelector(
     }
 }
 
+#[component]
+pub fn PreviewNewRecipe(
+
+) -> impl IntoView {
+    if cfg!(feature = "ssr") {
+        ().into_view()
+    } else {
+        logging::log!("{:#?}", window().opener());
+        "TODO".into_view()
+    }
+}

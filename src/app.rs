@@ -53,6 +53,7 @@ pub fn App() -> impl IntoView {
                     <Route path="/delete_image" view=admin::images::delete_image::DeleteImage/>
                     <Route path="/delete_recipe" view=admin::delete_recipe::DeleteRecipe/>
                 </Route>
+                <Route path="/admin/create_recipe/preview" view=admin::create_recipe::PreviewNewRecipe/>
                 <Route path="/*any" view=not_found::NotFound/>
             </Routes>
         </Router>
