@@ -114,9 +114,11 @@ pub fn CreateRecipe() -> impl IntoView {
                 <input
                     type="text"
                     name="name"
+                    id="new-recipe-name"
                     node_ref=name_node
                     placeholder="Recipe name"
                     prop:disabled=move || disabled.get()
+                    autocomplete="off"
                     required
                 />
             </div>
@@ -128,6 +130,8 @@ pub fn CreateRecipe() -> impl IntoView {
             <div>
                 <h5> "Instructions" </h5>
                 <textarea
+                    name="instructions"
+                    id="new-recipe-instructions"
                     node_ref=instructions_node
                     prop:disabled=move || disabled.get()
                     cols=50
@@ -138,6 +142,7 @@ pub fn CreateRecipe() -> impl IntoView {
                 <h5> "Recipe icon" </h5>
                 <input
                     type="file"
+                    id="new-recipe-icon"
                     name="Upload icon"
                     node_ref=icon_node
                     prop:disabled=move || disabled.get()
@@ -186,16 +191,20 @@ fn RecipeFormIngredientSelector(
     view! {
         <h5> "Add ingredients" </h5>
         <div>
-            <select prop:disabled=move || disabled.get() on:change=move |ev| {
-                let new_value = event_target_value(&ev).parse::<i32>().unwrap();
-                select_ingredient.set({
-                    if new_value == -1 {
-                        None
-                    } else {
-                        Some(new_value)
-                    }
-                });
-            }>
+            <select
+                name="select ingredient"
+                prop:disabled=move || disabled.get()
+                on:change=move |ev| {
+                    let new_value = event_target_value(&ev).parse::<i32>().unwrap();
+                    select_ingredient.set({
+                        if new_value == -1 {
+                            None
+                        } else {
+                            Some(new_value)
+                        }
+                    });
+                }
+            >
                 <option
                     value=-1
                     selected=move || select_ingredient.get().is_none()
@@ -238,7 +247,7 @@ fn RecipeFormIngredientSelector(
                 }
             />
         </div>
-        <ul>
+        <ul id="new-recipe-ingredient-list">
             <For
                 each=selected_ingredients
                 key=|ingredient| ingredient.ingredient_id
@@ -270,13 +279,81 @@ fn RecipeFormIngredientSelector(
 }
 
 #[component]
-pub fn PreviewNewRecipe(
+pub fn PreviewNewRecipe() -> impl IntoView {
+    let force_render_locally = create_local_resource(
+        ||(),
+        |_| async {},
+    );
 
-) -> impl IntoView {
-    if cfg!(feature = "ssr") {
-        ().into_view()
-    } else {
-        logging::log!("{:#?}", window().opener());
-        "TODO".into_view()
+    fn render() -> Option<View> {
+        let opener = if let Some(opener) = window().opener().ok() {
+            opener
+        } else {
+            return Some(view! { <h1> "Hey man, don't do that" </h1> }.into_view());
+        };
+        let document = web_sys::Window::from(opener).document()?;
+
+        use wasm_bindgen::{JsCast as _, JsValue};
+        use web_sys::{FileReader, HtmlInputElement, HtmlTextAreaElement};
+
+        let recipe_name = {
+            let input_elem_raw = document.get_element_by_id("new-recipe-name")?;
+            let input_elem_js_value = input_elem_raw.dyn_into::<JsValue>().ok()?;
+            HtmlInputElement::from(input_elem_js_value).value()
+        };
+
+        let ingredient_list = {
+            let input_elem_raw = document.get_element_by_id("new-recipe-ingredient-list")?;
+            let li_items = input_elem_raw.get_elements_by_tag_name("li");
+            let li_items_len: u32 = li_items.length();
+            let mut ingredients_texts = Vec::with_capacity(li_items_len as usize);
+            for i in 0..li_items_len {
+                let li_string = li_items.get_with_index(i)?
+                    .get_elements_by_tag_name("span")
+                    .get_with_index(0)?
+                    .text_content()?;
+                ingredients_texts.push(li_string);
+            }
+            ingredients_texts
+        };
+
+        let instructions = {
+            let text_area_elem_raw = document.get_element_by_id("new-recipe-instructions")?;
+            let input_elem_js_value = text_area_elem_raw.dyn_into::<JsValue>().ok()?;
+            HtmlTextAreaElement::from(input_elem_js_value).value()
+        };
+
+        {
+            let input_elem_raw = document.get_element_by_id("new-recipe-icon")?;
+            let input_elem_js_value = input_elem_raw.dyn_into::<JsValue>().ok()?;
+            let input_elem = HtmlInputElement::from(input_elem_js_value);
+            if let Some(val) = input_elem.files().unwrap().get(0) {
+                let file_reader = FileReader::new().ok()?;
+                file_reader.set_onload(Some(&web_sys::js_sys::Function::new_with_args(
+                    "e",
+                    "document.getElementById('image-preview').src = e.target.result;",
+                )));
+                file_reader.read_as_data_url(&val).ok()?;
+            }
+        }
+
+        logging::log!("name: {}", recipe_name);
+        logging::log!("ingredient_list: {:?}", ingredient_list);
+        logging::log!("instructions: {}", instructions);
+        // TODO Render info
+
+        Some(view! {
+            {"ok"}
+            <br />
+            <img id="image-preview" src="" alt="Image Preview" />
+        }.into_view())
+    }
+
+    view! {
+        <Show
+            when=move || force_render_locally.get().is_some()
+        >{ render().unwrap_or(view! {
+            <h1> "Rendering error" </h1>
+        }.into_view()) }</Show>
     }
 }
