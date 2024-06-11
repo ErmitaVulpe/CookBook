@@ -14,6 +14,14 @@ use pulldown_cmark::{
 use leptos::{view, IntoView, View};
 use std::ops::Deref;
 
+pub fn deafult_options() -> Options {
+    Options::ENABLE_STRIKETHROUGH |
+    Options::ENABLE_TASKLISTS |
+    Options::ENABLE_SMART_PUNCTUATION |
+    Options::ENABLE_HEADING_ATTRIBUTES |
+    Options::ENABLE_MATH
+}
+
 pub fn parse(text: &str, options: Options) -> impl IntoView {
     let parser = Parser::new_ext(text, options);
     let mut iter = TextMergeStream::new(parser);

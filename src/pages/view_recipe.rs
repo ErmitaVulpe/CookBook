@@ -140,12 +140,8 @@ pub fn ViewRecipeComponent(
         }}
         <h5> "Instruction:" </h5>
         {
-            use crate::md_parser::{Options, parse};
-
-            let mut options = Options::empty();
-            options.insert(Options::ENABLE_STRIKETHROUGH);
-
-            parse(&recipe_data.instructions, options)
+            use crate::md_parser::{deafult_options, parse};
+            parse(&recipe_data.instructions, deafult_options())
         }
         <h5> "Gallery:" </h5>
         {

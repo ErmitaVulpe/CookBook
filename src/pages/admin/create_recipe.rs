@@ -331,7 +331,7 @@ pub fn PreviewNewRecipe() -> impl IntoView {
                 let file_reader = FileReader::new().ok()?;
                 file_reader.set_onload(Some(&web_sys::js_sys::Function::new_with_args(
                     "e",
-                    "document.getElementById('image-preview').src = e.target.result;",
+                    "document.getElementById('icon-preview').src = e.target.result;",
                 )));
                 file_reader.read_as_data_url(&val).ok()?;
             }
@@ -340,12 +340,21 @@ pub fn PreviewNewRecipe() -> impl IntoView {
         logging::log!("name: {}", recipe_name);
         logging::log!("ingredient_list: {:?}", ingredient_list);
         logging::log!("instructions: {}", instructions);
-        // TODO Render info
 
         Some(view! {
-            {"ok"}
-            <br />
-            <img id="image-preview" src="" alt="Image Preview" />
+            <h1>{ &recipe_name }</h1>
+            <img id="icon-preview" src="" alt="Icon Preview" />
+            <h5> "Ingredients:" </h5>
+            <ul>{
+                ingredient_list.iter()
+                    .map(|e| view! {<li>{e}</li>})
+                    .collect_view()
+            }</ul>
+            <h5> "Instruction:" </h5>
+            {
+                use crate::md_parser::{deafult_options, parse};
+                parse(&instructions, deafult_options())
+            }
         }.into_view())
     }
 
