@@ -25,3 +25,10 @@ async fn extract_app_data() -> Result<std::sync::Arc<crate::AppData>, leptos::Se
 pub enum Error {
     Unauthorized,
 }
+
+pub fn is_valid_recipe_name(recipe_name: &str) -> bool {
+    recipe_name.chars().all(|c|
+        c.is_alphanumeric() ||
+        c.is_whitespace()
+    )
+}

@@ -109,6 +109,9 @@ async fn upload_icon_private(
     }
 
     recipe_name = recipe_name.to_lowercase();
+    if !super::is_valid_recipe_name(&recipe_name) {
+        return Ok(HttpResponse::BadRequest().finish())
+    }
 
     let result = app_data.cdn.transaction(|cdn| {
         cdn.upload_icon(&recipe_name, &raw_icon_bytes)
@@ -191,6 +194,9 @@ async fn upload_images_private(
     }
 
     recipe_name = recipe_name.to_lowercase();
+    if !super::is_valid_recipe_name(&recipe_name) {
+        return Ok(HttpResponse::BadRequest().finish())
+    }
 
     let result = app_data.cdn.transaction(|cdn| {
         for image in raw_image_bytes {
@@ -249,6 +255,9 @@ pub async fn delete_images(recipe_name: String, image_names: Vec<String>) -> Res
         },
         LoggedStatus::LoggedIn => {
             let recipe_name = recipe_name.to_lowercase();
+            if !super::is_valid_recipe_name(&recipe_name) {
+                return Err(ServerFnError::<NoCustomError>::Args("Bad Request".to_string()))
+            }
             let cdn = &app_data.cdn;
             let image_list = cdn.get_image_list(&recipe_name)?;
             { // Check if all image_names are in image_list

@@ -15,6 +15,8 @@ pub use models::{
 use super::Error;
 
 #[cfg(feature = "ssr")]
+use server_fn::error::NoCustomError;
+#[cfg(feature = "ssr")]
 use super::{
     auth::{check_if_logged, LoggedStatus}, 
     extract_app_data
@@ -118,6 +120,10 @@ pub async fn get_recipe_ingredients(name: String) -> Result<Vec<RecipeIngredient
     let app_data = extract_app_data().await?;
     let mut conn = app_data.get_conn()?;
 
+    if !super::is_valid_recipe_name(&name) {
+        return Ok(Vec::new());
+    }
+
     let result = recipe_ingredients
         .filter(recipe_name.eq(name.to_lowercase()))
         .select(RecipeIngredients::as_select())
@@ -140,6 +146,15 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 instructions: new_recipe_instructions,
                 ingredients: new_recipe_ingredients,
             } = recipe;
+
+            let all_ingredients_have_ammounts = new_recipe_ingredients.iter().all(|i| {
+                !i.ammount.is_empty()
+            });
+            if (!super::is_valid_recipe_name(&new_recipe_name)) ||
+               (!all_ingredients_have_ammounts)
+            {
+                return Err(ServerFnError::<NoCustomError>::Args("Bad Request".to_string()));
+            }
 
             let result = app_data.cdn.transaction(|c| {
                 c.create_recipe(&new_recipe_name)
@@ -204,6 +219,8 @@ pub async fn delete_recipes(recipe_names: Vec<String>) -> Result<Result<(), Erro
             let recipe_names = recipe_names
                 .iter()
                 .map(|s| s.to_lowercase())
+                // Input sanitizing
+                .filter(|s| super::is_valid_recipe_name(s))
                 .collect::<Vec<_>>();
 
             let result = conn.transaction(|conn| {
@@ -252,6 +269,10 @@ pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
 #[server(input = codec::GetUrl, output = codec::Cbor)]
 pub async fn get_images_for_recipe(recipe_name: String) -> Result<Vec<String>, ServerFnError> {
     use crate::cdn::CdnError;
+
+    if !super::is_valid_recipe_name(&recipe_name) {
+        return Ok(Vec::new());
+    }
 
     let app_data = extract_app_data().await?;
     match app_data.cdn.get_image_list(&recipe_name) {

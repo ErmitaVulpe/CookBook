@@ -45,6 +45,10 @@ pub fn CreateRecipe() -> impl IntoView {
         } = recipe;
         let recipe_name = recipe.name.clone();
         async move {
+            if !api::is_valid_recipe_name(&recipe.name) {
+                create_recipe_message.set(Ok("Invalid recipe name".to_string()));
+                return;
+            }
             create_recipe_message.set(Ok("Uploading".to_string()));
 
             match api::recipes::create_recipe(recipe).await {
@@ -236,10 +240,16 @@ fn RecipeFormIngredientSelector(
                     selected_ingredients.update(move |i| {
                         let selected_id = select_ingredient.get_untracked();
                         if let Some(val) = selected_id {
+                            let ammount = ingredient_ammount.get().unwrap().deref().value();
+                            if ammount.is_empty() {
+                                return;
+                            }
+
+                            // Check if this ingredient already exist
                             if !i.iter().any(|x| x.ingredient_id == val) {
                                 i.push(IngredientWithAmount {
                                     ingredient_id: val,
-                                    ammount: ingredient_ammount.get().unwrap().deref().value()
+                                    ammount,
                                 });
                             }
                         }
@@ -286,7 +296,7 @@ pub fn PreviewNewRecipe() -> impl IntoView {
     );
 
     fn render() -> Option<View> {
-        let opener = if let Some(opener) = window().opener().ok() {
+        let opener = if let Ok(opener) = window().opener() {
             opener
         } else {
             return Some(view! { <h1> "Hey man, don't do that" </h1> }.into_view());
