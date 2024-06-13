@@ -1,8 +1,10 @@
 pub mod auth;
 pub mod img;
+pub mod ingredients;
 pub mod recipes;
 
 use serde_repr::*;
+use std::fmt;
 
 #[cfg(feature="ssr")]
 use actix_web::web;
@@ -24,6 +26,14 @@ async fn extract_app_data() -> Result<std::sync::Arc<crate::AppData>, leptos::Se
 #[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
 pub enum Error {
     Unauthorized,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Error::Unauthorized => "Session expired please refresh the site",
+        })
+    }
 }
 
 pub fn is_valid_recipe_name(recipe_name: &str) -> bool {

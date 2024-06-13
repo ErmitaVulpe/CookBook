@@ -4,7 +4,6 @@ use std::ops::Deref;
 
 use crate::api::{
     self,
-    Error,
     recipes::{Recipe, IngredientWithAmount},
 };
 use crate::app::{IngredientsContext, RecipeNamesContext};
@@ -57,9 +56,7 @@ pub fn CreateRecipe() -> impl IntoView {
                     return;
                 },
                 Ok(Err(err)) => {
-                    create_recipe_message.set(match err {
-                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
-                    });
+                    create_recipe_message.set(Err(err.to_string()));
                     return;
                 },
                 Ok(Ok(())) => {},
@@ -72,9 +69,7 @@ pub fn CreateRecipe() -> impl IntoView {
                     return;
                 },
                 Ok(Err(err)) => {
-                    create_recipe_message.set(match err {
-                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
-                    });
+                    create_recipe_message.set(Err(err.to_string()));
                     return;
                 },
                 Ok(Ok(())) => {
@@ -346,10 +341,6 @@ pub fn PreviewNewRecipe() -> impl IntoView {
                 file_reader.read_as_data_url(&val).ok()?;
             }
         }
-
-        logging::log!("name: {}", recipe_name);
-        logging::log!("ingredient_list: {:?}", ingredient_list);
-        logging::log!("instructions: {}", instructions);
 
         Some(view! {
             <h1>{ &recipe_name }</h1>

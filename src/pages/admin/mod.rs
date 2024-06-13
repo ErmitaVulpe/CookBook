@@ -1,6 +1,7 @@
 pub mod create_recipe;
 pub mod delete_recipe;
 pub mod images;
+pub mod ingredients;
 
 use leptos::*;
 use leptos_router::*;
@@ -240,12 +241,17 @@ fn LoginForm(
 #[component]
 pub fn ToolList() -> impl IntoView {
     view! {
+        <h3> "Recipes" </h3>
         <ul>
             <li><A href="create_recipe"> "Create a recipe" </A></li>
             <li><A href="upload_image"> "Upload images" </A></li>
             <li><A href="delete_image"> "Delete images" </A></li>
             <li><A href="delete_recipe"> "Delete recipes" </A></li>
-            // <li><A href=""> "" </A></li>
+        </ul>
+        <h3> "Ingredients" </h3>
+        <ul>
+            <li><A href="create_ingredient"> "Create an ingredient" </A></li>
+            <li><A href="delete_ingredient"> "Delete ingredients" </A></li>
         </ul>
     }
 }

@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::api::{self, Error};
+use crate::api;
 
 use super::{GoBack, RecipeNamesContext};
 
@@ -42,9 +42,7 @@ pub fn UploadImage() -> impl IntoView {
                     return;
                 },
                 Ok(Err(err)) => {
-                    upload_message.set(match err {
-                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
-                    });
+                    upload_message.set(Err(err.to_string()));
                     return;
                 },
                 Ok(Ok(())) => clear_form(),

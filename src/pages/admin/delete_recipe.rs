@@ -1,10 +1,7 @@
 use leptos::*;
 use std::collections::BTreeSet;
 
-use crate::api::{
-    self,
-    Error,
-};
+use crate::api;
 use crate::app::RecipeNamesContext;
 
 use super::GoBack;
@@ -89,9 +86,7 @@ pub fn DeleteRecipe() -> impl IntoView {
                 confirm_signal.set(false);
                 view! {<p> "Recipe deleted successfully" </p>}
             },
-            Ok(Err(err)) => view! {<p style="color:red;"> {match err {
-                Error::Unauthorized => "Session expired please refresh the site",
-            }} </p>},
+            Ok(Err(err)) => view! {<p style="color:red;"> {err.to_string()} </p>},
             Err(err) => view! {<p style="color:red;"> {format!("Error deleting a recipe:\n{err}")} </p>},
         })}
     }

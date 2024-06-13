@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::api::{self, Error};
+use crate::api;
 use super::{GoBack, RecipeNamesContext};
 
 #[component]
@@ -39,9 +39,7 @@ pub fn DeleteImage() -> impl IntoView {
                     return;
                 },
                 Ok(Err(err)) => {
-                    delete_message.set(match err {
-                        Error::Unauthorized => Err("Session expired please refresh the site".to_string()),
-                    });
+                    delete_message.set(Err(err.to_string()));
                     return;
                 },
                 Ok(Ok(())) => {},

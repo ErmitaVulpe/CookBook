@@ -65,6 +65,25 @@ async fn main() -> std::io::Result<()> {
                 .load::<RecipeIngredient>(&mut conn);
             println!("{:#?}", result);
         }
+        {
+            #[derive(Debug, Clone, Queryable, Selectable)]
+            #[diesel(table_name = cook_book::schema::ingredients)]
+            #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+            struct RecipeIngredient {
+                #[allow(dead_code)]
+                id: i32,
+                #[allow(dead_code)]
+                name: String,
+                #[allow(dead_code)]
+                is_indexable: bool,
+            }
+
+            use cook_book::schema::ingredients::dsl::*;
+            let result = ingredients
+                .select(RecipeIngredient::as_select())
+                .load::<RecipeIngredient>(&mut conn);
+            println!("{:#?}", result);
+        }
     }
 
     HttpServer::new(move || {
