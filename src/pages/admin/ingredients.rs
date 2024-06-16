@@ -1,6 +1,8 @@
 use leptos::*;
 
+use std::collections::BTreeSet;
 use super::GoBack;
+use crate::app::IngredientsContext;
 use crate::api::{
     self,
     ingredients::CreateIngredientResult,
@@ -14,6 +16,7 @@ pub fn CreateIngredient() -> impl IntoView {
     let is_indexable = create_rw_signal(false);
 
     let create_ingredient_message = create_rw_signal(Ok::<String, String>(String::new()));
+    let ingredient_context = expect_context::<RwSignal<IngredientsContext>>();
 
     #[derive(Clone)]
     struct NewIngredient {
@@ -26,7 +29,7 @@ pub fn CreateIngredient() -> impl IntoView {
         let NewIngredient { name, is_indexable } = new_ingredient.clone();
         async move {
             let result = api::ingredients::create_ingredient(
-                name,
+                name.clone(),
                 is_indexable,
             ).await;
 
@@ -37,6 +40,17 @@ pub fn CreateIngredient() -> impl IntoView {
                     CreateIngredientResult::IngredientExists => Err("Ingredient already exists".to_string()),
                     CreateIngredientResult::Ok => {
                         form_node.get_untracked().unwrap().reset();
+                        ingredient_context.update(|v| {
+                            let b_tree_map = &mut v.0;
+                            let last_id = b_tree_map.keys().next_back().unwrap_or(&0);
+                            let new_ingredient_id = last_id + 1;
+                            let new_ingredient = api::recipes::Ingredient {
+                                id: new_ingredient_id,
+                                name,
+                                is_indexable,
+                            };
+                            b_tree_map.insert(new_ingredient_id, new_ingredient);
+                        });
                         Ok("Recipe created successfully".to_string())
                     },
                 }
@@ -102,9 +116,130 @@ pub fn CreateIngredient() -> impl IntoView {
 
 #[component]
 pub fn DeleteIngredient() -> impl IntoView {
+    use api::ingredients::DeleteIngredientResult;
+
+    let ingredient_context = expect_context::<RwSignal<IngredientsContext>>();
+    let selected_ingredients = create_rw_signal(BTreeSet::<i32>::new());
     
+    let confirm_node = create_node_ref::<html::Input>();
+    let confirm_signal = create_rw_signal(false);
+
+    #[derive(Clone)]
+    enum DeleteMessage {
+        Empty,
+        Pending,
+        Error(String),
+        Result(Vec<DeleteIngredientResult>),
+    }
+    let delete_message = create_rw_signal(DeleteMessage::Empty);
+
+    create_effect(move |_| {
+        logging::log!("{:#?}", ingredient_context.get());
+    });
+
+    let delete_ingredients = create_action(move |()| {
+        delete_message.set(DeleteMessage::Pending);
+        let ingredients_to_delete = selected_ingredients
+            .get_untracked()
+            .iter()
+            .map(|i| i.to_owned())
+            .collect();
+        let req = api::ingredients::delete_ingredients(ingredients_to_delete);
+        async move {
+            let msg = match req.await {
+                Err(err) => DeleteMessage::Error(err.to_string()),
+                Ok(Err(err)) => DeleteMessage::Error(err.to_string()),
+                Ok(Ok(val)) => DeleteMessage::Result(val),
+            };
+            delete_message.set(msg);
+        }
+    });
+
     view! {
         <GoBack />
         <h2> "Delete ingredients" </h2>
+        <div style="max-height: 15rem; overflow-y: scroll;">
+            {move || ingredient_context.get().0.into_iter()
+                .map(|n| {
+                    let input_node = create_node_ref::<html::Input>();
+                    let ingredient_name = n.1.name.replace(' ', "-");
+
+                    view! {
+                        <div>
+                            <input
+                                type="checkbox"
+                                id=format!("delete-recipe-{ingredient_name}")
+                                name=&ingredient_name
+                                value=n.0
+                                node_ref=input_node
+                                on:change=move |_| {
+                                    let input_node = input_node.get().unwrap();
+                                    let name = input_node.value().parse().unwrap();
+
+                                    selected_ingredients.update(move |x| {
+                                        if input_node.checked() {
+                                            x.insert(name);
+                                        } else {
+                                            x.remove(&name);
+                                        }
+                                    });
+                                }
+                            />
+                            <label for=format!("delete-recipe-{ingredient_name}")> {&n.1.name} </label>
+                        </div>
+                    }
+                })
+                .collect::<Vec<_>>()
+            }
+        </div>
+        <div style="padding: 1rem 0;">
+            <input
+                type="checkbox"
+                id="confirm-delete"
+                node_ref=confirm_node
+                on:change=move |_| {
+                    confirm_signal.set( confirm_node.get().unwrap().checked() );
+                }
+            />
+            <label for="confirm-delete"> "Yes im sure" </label>
+        </div>
+        <button
+            disabled=move || {
+                selected_ingredients.get().is_empty() || (!confirm_signal.get())
+            }
+            on:click=move |_| {
+                delete_ingredients.dispatch(());
+            }
+        > "Delete selected recipes" </button>
+        {move || match delete_message.get() {
+            DeleteMessage::Empty => ().into_view(),
+            DeleteMessage::Pending => "Uploading".into_view(),
+            DeleteMessage::Error(err) => err.into_view(),
+            DeleteMessage::Result(val) => {
+                logging::log!("{val:#?}");
+            
+                let ok_count = val.iter()
+                    .filter(|r| **r == DeleteIngredientResult::Ok )
+                    .count();
+                let mut err_iter = val.iter()
+                    .enumerate()
+                    .filter(|(_, r)| **r != DeleteIngredientResult::Ok )
+                    .peekable();
+            
+                view! {
+                    <p> {format!("Successfully deleted {ok_count} recipes")} </p>
+                    // TODO continue display conflicting recipes
+                    // if errors are not empty
+                    {err_iter.peek().map(|_| {
+                        view! {
+                            <p> "Couldn't delete the following ingredients because they are used in these recipes" </p>
+                            {err_iter.map(|e| view! {
+                                "asd"
+                            }).collect_view()}
+                        }.into_view()
+                    })}
+                }.into_view()
+            },
+        }}
     }
 }
