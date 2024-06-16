@@ -244,7 +244,7 @@ fn RecipeFormIngredientSelector(
                             if !i.iter().any(|x| x.ingredient_id == val) {
                                 i.push(IngredientWithAmount {
                                     ingredient_id: val,
-                                    ammount,
+                                    ammount: ammount.trim().to_string(),
                                 });
                             }
                         }

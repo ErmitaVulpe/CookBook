@@ -104,8 +104,6 @@ pub async fn delete_ingredients(ingredeint_ids: Vec<i32>) -> Result<Result<Vec<D
                 Ok(results)
             });
 
-            println!("{result:#?}");
-
             match result {
                 Ok(val) => Ok(Ok(val)),
                 Err(err) => Err(ServerFnError::from(err)),

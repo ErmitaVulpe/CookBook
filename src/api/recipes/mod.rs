@@ -63,12 +63,13 @@ pub struct OwnedIngredientWithAmount {
 pub async fn get_recipe(recipe_name: String) -> Result<Option<Recipe>, ServerFnError> {
     let app_data = extract_app_data().await?;
     let mut conn = app_data.get_conn()?;
+    let recipe_name = recipe_name.trim();
 
     let recipe = {
         use crate::schema::recipes::dsl::*;
 
         let result = recipes
-            .find(&recipe_name)
+            .find(recipe_name)
             .select(models::Recipe::as_select())
             .first(&mut conn)
             .optional()
@@ -84,14 +85,14 @@ pub async fn get_recipe(recipe_name: String) -> Result<Option<Recipe>, ServerFnE
         use crate::schema::recipe_ingredients::dsl;
 
         dsl::recipe_ingredients
-            .filter(dsl::recipe_name.eq(&recipe_name))
+            .filter(dsl::recipe_name.eq(recipe_name))
             .select(IngredientWithAmount::as_select())
             .load(&mut conn)
             .map_err(|e| ServerFnError::new(e.to_string()))?
     };
 
     Ok(Some(Recipe {
-        name: recipe_name,
+        name: recipe_name.to_string(),
         instructions: recipe.instructions,
         ingredients,
     }))
@@ -119,8 +120,9 @@ pub async fn get_recipe_ingredients(name: String) -> Result<Vec<RecipeIngredient
 
     let app_data = extract_app_data().await?;
     let mut conn = app_data.get_conn()?;
+    let name = name.trim();
 
-    if !super::is_valid_recipe_name(&name) {
+    if !super::is_valid_recipe_name(name) {
         return Ok(Vec::new());
     }
 
@@ -146,18 +148,19 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 instructions: new_recipe_instructions,
                 ingredients: new_recipe_ingredients,
             } = recipe;
+            let new_recipe_name = new_recipe_name.trim();
 
             let all_ingredients_have_ammounts = new_recipe_ingredients.iter().all(|i| {
                 !i.ammount.is_empty()
             });
-            if (!super::is_valid_recipe_name(&new_recipe_name)) ||
+            if (!super::is_valid_recipe_name(new_recipe_name)) ||
                (!all_ingredients_have_ammounts)
             {
                 return Err(ServerFnError::<NoCustomError>::Args("Bad Request".to_string()));
             }
 
             let result = app_data.cdn.transaction(|c| {
-                c.create_recipe(&new_recipe_name)
+                c.create_recipe(new_recipe_name)
             });
 
             if let Err(err) = result {
@@ -170,7 +173,7 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                 {
                     use crate::schema::recipes::dsl::*;
                     insert_into(recipes).values((
-                        name.eq(&new_recipe_name),
+                        name.eq(new_recipe_name),
                         instructions.eq(&new_recipe_instructions),
                     )).execute(conn)
                     .map(|_| ())?
@@ -179,7 +182,7 @@ pub async fn create_recipe(recipe: Recipe) -> Result<Result<(), Error>, ServerFn
                     use crate::schema::recipe_ingredients::dsl::*;
 
                     let asd = new_recipe_ingredients.iter().map(|i| {
-                        i.to_insertable(&new_recipe_name)
+                        i.to_insertable(new_recipe_name)
                     }).collect::<Vec<_>>();
 
                     insert_into(recipe_ingredients).values(
@@ -218,7 +221,7 @@ pub async fn delete_recipes(recipe_names: Vec<String>) -> Result<Result<(), Erro
             let mut conn = app_data.get_conn()?;
             let recipe_names = recipe_names
                 .iter()
-                .map(|s| s.to_lowercase())
+                .map(|s| s.trim().to_lowercase())
                 // Input sanitizing
                 .filter(|s| super::is_valid_recipe_name(s))
                 .collect::<Vec<_>>();
@@ -270,12 +273,13 @@ pub async fn get_recipe_names() -> Result<Vec<String>, ServerFnError> {
 pub async fn get_images_for_recipe(recipe_name: String) -> Result<Vec<String>, ServerFnError> {
     use crate::cdn::CdnError;
 
-    if !super::is_valid_recipe_name(&recipe_name) {
+    let recipe_name = recipe_name.trim();
+    if !super::is_valid_recipe_name(recipe_name) {
         return Ok(Vec::new());
     }
 
     let app_data = extract_app_data().await?;
-    match app_data.cdn.get_image_list(&recipe_name) {
+    match app_data.cdn.get_image_list(recipe_name) {
         Ok(val) => Ok(val),
         Err(CdnError::RecipeDoesntExist) => Ok(Vec::new()),
         Err(err) => Err(err.into()),

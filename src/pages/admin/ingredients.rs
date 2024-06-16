@@ -68,7 +68,7 @@ pub fn CreateIngredient() -> impl IntoView {
                 ev.prevent_default();
 
                 let new_ingredient = NewIngredient {
-                    name: name_node.get_untracked().unwrap().value(),
+                    name: name_node.get_untracked().unwrap().value().trim().to_string(),
                     is_indexable: is_indexable.get_untracked(),
                 };
                 action.dispatch(new_ingredient);
@@ -120,6 +120,8 @@ pub fn DeleteIngredient() -> impl IntoView {
 
     let ingredient_context = expect_context::<RwSignal<IngredientsContext>>();
     let selected_ingredients = create_rw_signal(BTreeSet::<i32>::new());
+    // Required for displaying the error msg
+    let rqeuested_ingredients_to_delete = create_rw_signal(None);
     
     let confirm_node = create_node_ref::<html::Input>();
     let confirm_signal = create_rw_signal(false);
@@ -143,7 +145,8 @@ pub fn DeleteIngredient() -> impl IntoView {
             .get_untracked()
             .iter()
             .map(|i| i.to_owned())
-            .collect();
+            .collect::<Vec<_>>();
+        rqeuested_ingredients_to_delete.set(Some(ingredients_to_delete.clone()));
         let req = api::ingredients::delete_ingredients(ingredients_to_delete);
         async move {
             let msg = match req.await {
@@ -159,10 +162,12 @@ pub fn DeleteIngredient() -> impl IntoView {
         <GoBack />
         <h2> "Delete ingredients" </h2>
         <div style="max-height: 15rem; overflow-y: scroll;">
-            {move || ingredient_context.get().0.into_iter()
-                .map(|n| {
+            <For
+                each=move || ingredient_context.get().0
+                key=|ingredient| ingredient.0
+                children=move |(id, ingredient)| {
                     let input_node = create_node_ref::<html::Input>();
-                    let ingredient_name = n.1.name.replace(' ', "-");
+                    let ingredient_name = ingredient.name.replace(' ', "-");
 
                     view! {
                         <div>
@@ -170,7 +175,7 @@ pub fn DeleteIngredient() -> impl IntoView {
                                 type="checkbox"
                                 id=format!("delete-recipe-{ingredient_name}")
                                 name=&ingredient_name
-                                value=n.0
+                                value=id
                                 node_ref=input_node
                                 on:change=move |_| {
                                     let input_node = input_node.get().unwrap();
@@ -185,12 +190,11 @@ pub fn DeleteIngredient() -> impl IntoView {
                                     });
                                 }
                             />
-                            <label for=format!("delete-recipe-{ingredient_name}")> {&n.1.name} </label>
+                            <label for=format!("delete-recipe-{ingredient_name}")> {&ingredient.name} </label>
                         </div>
                     }
-                })
-                .collect::<Vec<_>>()
-            }
+                }
+            />
         </div>
         <div style="padding: 1rem 0;">
             <input
@@ -216,28 +220,49 @@ pub fn DeleteIngredient() -> impl IntoView {
             DeleteMessage::Pending => "Uploading".into_view(),
             DeleteMessage::Error(err) => err.into_view(),
             DeleteMessage::Result(val) => {
-                logging::log!("{val:#?}");
-            
+                let rqeuested_ingredients_to_delete = rqeuested_ingredients_to_delete.get_untracked().unwrap();
+
                 let ok_count = val.iter()
-                    .filter(|r| **r == DeleteIngredientResult::Ok )
+                    .enumerate()
+                    .filter(|(_, r)| **r == DeleteIngredientResult::Ok )
+                    .map(|(i, _)| {
+                        let ingredient_id = rqeuested_ingredients_to_delete[i];
+                        selected_ingredients.update(|s| { s.remove(&ingredient_id); });
+                        ingredient_context.update(|s| { s.0.remove(&ingredient_id); });
+                    })
                     .count();
                 let mut err_iter = val.iter()
                     .enumerate()
-                    .filter(|(_, r)| **r != DeleteIngredientResult::Ok )
+                    .filter_map(|(i, r)| {
+                        if let DeleteIngredientResult::IngredientInUse(recipes) = r {
+                            Some((i, recipes))
+                        } else {
+                            None
+                        }
+                    })
                     .peekable();
             
                 view! {
-                    <p> {format!("Successfully deleted {ok_count} recipes")} </p>
-                    // TODO continue display conflicting recipes
-                    // if errors are not empty
-                    {err_iter.peek().map(|_| {
-                        view! {
-                            <p> "Couldn't delete the following ingredients because they are used in these recipes" </p>
-                            {err_iter.map(|e| view! {
-                                "asd"
-                            }).collect_view()}
-                        }.into_view()
-                    })}
+                    <p> {format!("Successfully deleted {ok_count} ingredients")} </p>
+                    {match err_iter.peek() {
+                        None => ().into_view(),
+                        Some(_) => {
+                            let ingredient_context = ingredient_context.get_untracked();
+                            view! {
+                                <p> "Couldn't delete the following ingredients because they are used in these recipes" </p>
+                                {err_iter.map(|(i, recipes)| view! {
+                                    <li>{
+                                        let ingredient_id = rqeuested_ingredients_to_delete[i];
+                                        format!(
+                                            "{}: {}",
+                                            ingredient_context.0[&ingredient_id].name,
+                                            recipes.join(", "),
+                                        )
+                                    }</li>
+                                }).collect_view()}
+                            }.into_view()
+                        },
+                    }}
                 }.into_view()
             },
         }}
