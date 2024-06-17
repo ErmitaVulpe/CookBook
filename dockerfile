@@ -1,5 +1,8 @@
 FROM rust:alpine as builder
 
+ARG PUBLIC_URL
+ENV PUBLIC_URL $PUBLIC_URL
+
 WORKDIR /usr/src/cook-book
 
 RUN apk update && apk add \

@@ -23,8 +23,10 @@ build/.env: build
 	"ADMIN_PASSWORD=admin" \
 	> build/.env
 
+# Example use:
+# PUBLIC_URL="https://example.com/example" make docker
 docker:
-	docker build -t cook-book:latest .
+	docker build -t cook-book:latest $(if $(PUBLIC_URL),--build-arg PUBLIC_URL=$(PUBLIC_URL)) .
 
 clean:
 	cargo clean
