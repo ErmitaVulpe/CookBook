@@ -108,8 +108,16 @@ pub fn ViewRecipeComponent(
             view! {
                 <Meta property="og:title" content=recipe_data.name.clone()/>
                 <Meta property="og:type" content="website"/>
-                <Meta property="og:image" content=icon_url.clone()/>
-                <Meta property="og:url" content=format!("/r/{}", &recipe_data.name)/>
+                <Meta property="og:image" content=format!(
+                    "{}{}",
+                    crate::PUBLIC_URL,
+                    icon_url.clone(),
+                )/>
+                <Meta property="og:url" content=format!(
+                    "{}/r/{}",
+                    crate::PUBLIC_URL,
+                    recipe_data.name
+                )/>
             }
         }}
 

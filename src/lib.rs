@@ -18,6 +18,8 @@ pub mod schema;
 #[cfg(feature = "ssr")]
 pub mod cdn;
 
+pub const PUBLIC_URL: &str = env!("BUILD_PUBLIC_URL");
+
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {

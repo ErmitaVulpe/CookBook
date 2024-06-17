@@ -18,7 +18,7 @@ RUN make
 FROM alpine:latest as runner
 
 WORKDIR /app
-EXPOSE 8080/tcp
+EXPOSE 3000/tcp
 
 COPY --from=builder /usr/src/cook-book/build .
 ENTRYPOINT ["./cook-book"]

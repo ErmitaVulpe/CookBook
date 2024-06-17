@@ -18,7 +18,7 @@ build/.env: build
 	"DATABASE_URL=db.sqlite" \
 	"CDN_PATH=cdn/" \
 	"LEPTOS_SITE_ROOT=site/" \
-	"LEPTOS_SITE_ADDR=0.0.0.0:8080" \
+	"LEPTOS_SITE_ADDR=0.0.0.0:3000" \
 	"ADMIN_USERNAME=admin" \
 	"ADMIN_PASSWORD=admin" \
 	> build/.env
