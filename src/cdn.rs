@@ -111,7 +111,9 @@ impl Cdn {
 
             if let Some(file_name) = path.file_name() {
                 if let Some(file_name_str) = file_name.to_str() {
-                    image_list.push(file_name_str.to_string());
+                    if file_name_str != "icon" {
+                        image_list.push(file_name_str.to_string());
+                    }
                 }
             }
         }

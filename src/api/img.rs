@@ -263,7 +263,10 @@ pub async fn delete_images(recipe_name: String, image_names: Vec<String>) -> Res
             { // Check if all image_names are in image_list
                 use std::collections::HashSet;
                 
-                let set = image_list.iter().collect::<HashSet<_>>();
+                let set = image_list
+                    .iter()
+                    .filter(|i| *i != "icon")
+                    .collect::<HashSet<_>>();
                 if !image_names.iter().all(|i| set.contains(i)) {
                     return Err(CdnError::ImageDoesntExist.into());
                 }

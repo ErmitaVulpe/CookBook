@@ -48,8 +48,7 @@ pub fn ViewRecipe() -> impl IntoView {
                     Ok((None, _)) => view! {
                         <super::not_found::NotFound /> // TODO figure out why it doesnt return 404
                     },
-                    Ok((Some(recipe_data), mut images)) => {
-                        images.retain(|e| e != "icon");
+                    Ok((Some(recipe_data), images)) => {
                         view! {
                             <ViewRecipeComponent
                                 recipe_data=recipe_data
@@ -103,10 +102,16 @@ pub fn ViewRecipeComponent(
     let icon_url = format!("{img_url_prefix}icon");
 
     view! {
-        <Meta property="og:title" content=recipe_data.name.clone()/>
-        <Meta property="og:type" content="website"/>
-        <Meta property="og:image" content=icon_url.clone()/>
-        <Meta property="og:url" content=format!("/r/{}", &recipe_data.name)/>
+        // Opengraph tags
+        // This generates some browser wanrings but i want it that way
+        { {
+            view! {
+                <Meta property="og:title" content=recipe_data.name.clone()/>
+                <Meta property="og:type" content="website"/>
+                <Meta property="og:image" content=icon_url.clone()/>
+                <Meta property="og:url" content=format!("/r/{}", &recipe_data.name)/>
+            }
+        }}
 
         <h1>{ &recipe_data.name }</h1>
         <img

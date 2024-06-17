@@ -92,8 +92,14 @@ pub fn DeleteImage() -> impl IntoView {
                     match image_list {
                         Err(err) => view! { <p style="color:red;"> {err.to_string()} </p> }.into_view(),
                         Ok(mut image_list) => {
-                            if image_list.is_empty() || selected_recipe.get().is_none() {
+                            if selected_recipe.get().is_none() {
                                 return ().into_view();
+                            }
+
+                            if image_list.is_empty() {
+                                return view! {
+                                    <p> "No images to delete for this recipe" </p>
+                                }.into_view();
                             }
 
                             image_list.sort();

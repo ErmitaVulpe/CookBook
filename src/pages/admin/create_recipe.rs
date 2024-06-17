@@ -296,19 +296,19 @@ pub fn PreviewNewRecipe() -> impl IntoView {
         } else {
             return Some(view! { <h1> "Hey man, don't do that" </h1> }.into_view());
         };
-        let document = web_sys::Window::from(opener).document()?;
+        let opener_document = web_sys::Window::from(opener).document()?;
 
         use wasm_bindgen::{JsCast as _, JsValue};
         use web_sys::{FileReader, HtmlInputElement, HtmlTextAreaElement};
 
         let recipe_name = {
-            let input_elem_raw = document.get_element_by_id("new-recipe-name")?;
+            let input_elem_raw = opener_document.get_element_by_id("new-recipe-name")?;
             let input_elem_js_value = input_elem_raw.dyn_into::<JsValue>().ok()?;
             HtmlInputElement::from(input_elem_js_value).value()
         };
 
         let ingredient_list = {
-            let input_elem_raw = document.get_element_by_id("new-recipe-ingredient-list")?;
+            let input_elem_raw = opener_document.get_element_by_id("new-recipe-ingredient-list")?;
             let li_items = input_elem_raw.get_elements_by_tag_name("li");
             let li_items_len: u32 = li_items.length();
             let mut ingredients_texts = Vec::with_capacity(li_items_len as usize);
@@ -323,21 +323,29 @@ pub fn PreviewNewRecipe() -> impl IntoView {
         };
 
         let instructions = {
-            let text_area_elem_raw = document.get_element_by_id("new-recipe-instructions")?;
+            let text_area_elem_raw = opener_document.get_element_by_id("new-recipe-instructions")?;
             let input_elem_js_value = text_area_elem_raw.dyn_into::<JsValue>().ok()?;
             HtmlTextAreaElement::from(input_elem_js_value).value()
         };
 
         {
-            let input_elem_raw = document.get_element_by_id("new-recipe-icon")?;
+            let input_elem_raw = opener_document.get_element_by_id("new-recipe-icon")?;
             let input_elem_js_value = input_elem_raw.dyn_into::<JsValue>().ok()?;
             let input_elem = HtmlInputElement::from(input_elem_js_value);
             if let Some(val) = input_elem.files().unwrap().get(0) {
                 let file_reader = FileReader::new().ok()?;
-                file_reader.set_onload(Some(&web_sys::js_sys::Function::new_with_args(
-                    "e",
-                    "document.getElementById('icon-preview').src = e.target.result;",
-                )));
+                use wasm_bindgen::closure::Closure;
+                let onload_callback = Closure::once_into_js(Box::new(|event: web_sys::Event| {
+                    let reader = event.target().unwrap();
+                    let reader = reader.dyn_into::<FileReader>().unwrap();
+                    let result = reader.result().unwrap();
+
+                    let element = document().get_element_by_id("icon-preview").unwrap();
+                    let img_element = element.dyn_into::<web_sys::HtmlImageElement>().unwrap();
+                    img_element.set_src(&result.as_string().unwrap());
+                }));
+
+                file_reader.set_onload(Some(onload_callback.as_ref().unchecked_ref()));
                 file_reader.read_as_data_url(&val).ok()?;
             }
         }

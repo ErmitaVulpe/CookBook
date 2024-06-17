@@ -244,9 +244,12 @@ pub fn ToolList() -> impl IntoView {
         <h3> "Recipes" </h3>
         <ul>
             <li><A href="create_recipe"> "Create a recipe" </A></li>
+            <li><A href="delete_recipe"> "Delete recipes" </A></li>
+        </ul>
+        <h3> "Images" </h3>
+        <ul>
             <li><A href="upload_image"> "Upload images" </A></li>
             <li><A href="delete_image"> "Delete images" </A></li>
-            <li><A href="delete_recipe"> "Delete recipes" </A></li>
         </ul>
         <h3> "Ingredients" </h3>
         <ul>
