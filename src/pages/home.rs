@@ -1,33 +1,45 @@
 use leptos::*;
-use std::ops::Deref;
+use leptos_router::*;
+use crate::api;
 
-/// Renders the home page of your application.
 #[component]
 pub fn Home() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let (count, set_count) = create_signal(0);
-    let on_click = move |_| set_count.update(|count| *count += 1);
-
-    let file_input = create_node_ref::<html::Input>();
+    let recipes = create_resource(
+        ||(),
+        |_| api::recipes::get_recipe_names(),
+    );
 
     view! {
-        <h1>"Welcome to Leptos!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
-        <br/>
-        <input
-            name="Upload photos"
-            type="file"
-            node_ref=file_input
-            accept="image/*"
-            multiple
-
-            on:change=move |_| {
-                let file_list: web_sys::FileList = file_input().unwrap().deref().files().unwrap();
-                for i in 0..file_list.length() {
-                    logging::log!("{:#?}", file_list.get(i).unwrap());
+        <Suspense fallback=move || view! { <p>"Loading"</p> }>
+            <ErrorBoundary fallback=|errors| {
+                view! {
+                    <div class="error">
+                        <h1>"Something went wrong."</h1>
+                        <ul>
+                        {move || errors.get()
+                            .into_iter()
+                            .map(|(_, error)| view! { <li>{error.to_string()} </li> })
+                            .collect_view()
+                        }
+                        </ul>
+                    </div>
                 }
-                logging::log!("{:#?}", file_list);
-            }
-        />
+            }>
+                <h1> "Recipes:" </h1>
+                <ul>
+                    {move || {
+                        recipes.get().map(|r| r.map(|v| 
+                            v.into_iter().map(|recipe_name| view! {
+                                <li>
+                                    <A
+                                        href=format!("{}/r/{recipe_name}", crate::PUBLIC_URL)
+                                    > {recipe_name} </A>
+                                </li>
+                            }).collect_view()
+                        ))
+                    }}
+                </ul>
+            </ErrorBoundary>
+        </Suspense>
     }
 }
