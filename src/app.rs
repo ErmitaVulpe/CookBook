@@ -41,6 +41,9 @@ pub fn App() -> impl IntoView {
         <Title text="Cook book"/>
 
         <Router>
+            <nav>
+                <A href="/"> "To home" </A>
+            </nav>
             <Routes>
                 <Route path="" view=home::Home/>
                 <Route path="/r" view=PreleadResources>

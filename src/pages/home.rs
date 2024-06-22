@@ -32,7 +32,7 @@ pub fn Home() -> impl IntoView {
                             v.into_iter().map(|recipe_name| view! {
                                 <li>
                                     <A
-                                        href=format!("{}/r/{recipe_name}", crate::PUBLIC_URL)
+                                        href=format!("/r/{recipe_name}")
                                     > {recipe_name} </A>
                                 </li>
                             }).collect_view()
